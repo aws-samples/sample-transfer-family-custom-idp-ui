@@ -1,0 +1,32 @@
+{
+  "vpc-provider:account=401350835130:filter.tag:Name=SampleVpcStack/CustomIdpVpc:region=us-east-1:returnAsymmetricSubnets=true": {
+    "vpcId": "vpc-0e58b524b8156c03f",
+    "vpcCidrBlock": "10.0.0.0/16",
+    "ownerAccountId": "401350835130",
+    "availabilityZones": [],
+    "subnetGroups": [
+      {
+        "name": "CustomIdp",
+        "type": "Isolated",
+        "subnets": [
+          {
+            "subnetId": "subnet-050a05bf88ede243e",
+            "cidr": "10.0.0.0/24",
+            "availabilityZone": "us-east-1a",
+            "routeTableId": "rtb-0f9ac3ae1e68e88cc"
+          },
+          {
+            "subnetId": "subnet-0bb5b80be82bebe27",
+            "cidr": "10.0.1.0/24",
+            "availabilityZone": "us-east-1b",
+            "routeTableId": "rtb-00e72a418ba60f1dc"
+          }
+        ]
+      }
+    ]
+  },
+  "acknowledged-issue-numbers": [
+    31106,
+    31106
+  ]
+}
