@@ -8,9 +8,13 @@ from aws_cdk import (
     aws_elasticloadbalancingv2_targets as elbv2_targets,
     aws_lambda as lambda_,
     aws_dynamodb as ddb,
+    aws_route53 as route53,
+    aws_route53_targets as route53_targets,
+    aws_certificatemanager as acm
 )
 import aws_cdk as cdk
 import os
+
 
 # setup logs retention
 
@@ -72,7 +76,7 @@ class CustomIdpEcsStack(Stack):
                                             'POWERTOOLS_METRICS_NAMESPACE': 'TransferFamilyToolkit',
                                             'POWERTOOLS_SERVICE_NAME': "ToolkitIdpAdmin",
                                             "LOG_LEVEL": "DEBUG",
-                                            'IDP_TABLE_NAME': 'transferidp_identity_providers' # todo paramaterize
+                                            'IDP_TABLE_NAME': 'transferidp_identity_providers'  # todo paramaterize
                                         },
                                         tracing=lambda_.Tracing.ACTIVE,
                                         log_retention=cdk.aws_logs.RetentionDays.FIVE_DAYS,
@@ -82,14 +86,14 @@ class CustomIdpEcsStack(Stack):
                                          runtime=runtime,
                                          handler='manage_users.handler',
                                          code=lambda_.Code.from_asset(
-                                            os.path.join(os.path.dirname("./functions/manage_users.py"))),
+                                             os.path.join(os.path.dirname("./functions/manage_users.py"))),
                                          vpc=vpc,
                                          environment={
-                                            'POWERTOOLS_METRICS_NAMESPACE': 'TransferFamilyToolkit',
-                                            'POWERTOOLS_SERVICE_NAME': "ToolkitIdpAdmin",
-                                            "LOG_LEVEL": "DEBUG",
-                                            'USER_TABLE_NAME': 'transferidp_users'  # todo paramaterize
-                                        },
+                                             'POWERTOOLS_METRICS_NAMESPACE': 'TransferFamilyToolkit',
+                                             'POWERTOOLS_SERVICE_NAME': "ToolkitIdpAdmin",
+                                             "LOG_LEVEL": "DEBUG",
+                                             'USER_TABLE_NAME': 'transferidp_users'  # todo paramaterize
+                                         },
                                          tracing=lambda_.Tracing.ACTIVE,
                                          log_retention=cdk.aws_logs.RetentionDays.FIVE_DAYS,
                                          timeout=cdk.Duration.seconds(3))
@@ -101,12 +105,37 @@ class CustomIdpEcsStack(Stack):
 
         ddb.Table.from_table_name(self, 'idpTable', table_name='transferidp_identity_providers').grant_read_write_data(
             idp_function)
-        ddb.Table.from_table_name(self, 'userTable',table_name='transferidp_users').grant_read_write_data(user_function)
+        ddb.Table.from_table_name(self, 'userTable', table_name='transferidp_users').grant_read_write_data(
+            user_function)
 
+        toolkit_domain = 'toolkit.transferfamily.aws.com'
         alb = elbv2.ApplicationLoadBalancer(self, 'CustomIdpLoadBalancer',
                                             vpc=vpc,
-                                            internet_facing=False)
-        listener = alb.add_listener("LoadBalancerListener", port=80, open=True)  # change 'open' to false, add SG
+                                            internet_facing=False
+                                            )
+
+        zone = route53.PrivateHostedZone(self, 'CustomIdpHostedZone',
+                                         zone_name=toolkit_domain,
+                                         vpc=vpc)
+        route53.ARecord(self, "ToolkitUiDomain",
+                        zone=zone,
+                        target=route53.RecordTarget.from_alias(
+                            route53_targets.LoadBalancerTarget(alb)
+                        ))
+
+        # todo: to enable HTTPS, you will need a private certificate authority
+        # https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_acmpca/CfnCertificateAuthority.html
+
+        # certificate = acm.PrivateCertificate(self, 'CustomIdpCertificate',
+        #                                      domain_name=toolkit_domain,
+        #                                      certificate_authority=)
+
+        listener = alb.add_listener("LoadBalancerListener",
+                                    port=80, #443,
+                                    open=True,
+                                    #certificates=[certificate],
+                                    #protocol=elbv2.ApplicationProtocol.HTTPS),
+                                    protocol=elbv2.ApplicationProtocol.HTTP)
         listener.add_targets("TargetGroup", port=80, targets=[service])
         listener.add_targets("IdpLambdaTargetGroup", health_check=elbv2.HealthCheck(enabled=False),
                              priority=10,
@@ -119,9 +148,7 @@ class CustomIdpEcsStack(Stack):
                              conditions=[elbv2.ListenerCondition.path_patterns(["/api/user/*"])],
                              targets=[elbv2_targets.LambdaTarget(user_function)])
 
-
-        # after all functional requirements, secure everything
         # todo --> add cognito with verified permissions to web app, admin and user management groups.
-        # https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_elasticloadbalancingv2_actions/README.html
-        #  This is the last thing you'll add once everything is working
-        # todo, integrate with Cognito, secure the endpoint with TLS
+        # https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_verifiedpermissions/README.html
+        # https://constructs.dev/packages/@cdklabs/cdk-verified-permissions/v/0.1.5?lang=typescript
+

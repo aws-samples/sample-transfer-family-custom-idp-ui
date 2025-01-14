@@ -6,7 +6,7 @@ Once you deploy to ECS, start a session manager session from your local.
 todo: update this to use HTTPS, even if HTTPS forwards to HTTP
 todo: create a way to output this full command from the scripts if you can
 
-aws ssm start-session --target i-09e85b841e319e30d --document-name AWS-StartPortForwardingSessionToRemoteHost --parameters '{"portNumber":["80"],"localPortNumber":["8080"],"host":["internal-Custom-Custo-kOXb11ZUe62Y-1583837551.us-east-1.elb.amazonaws.com"]}'
+aws ssm start-session --target i-09e85b841e319e30d --document-name AWS-StartPortForwardingSessionToRemoteHost --parameters '{"portNumber":["80"],"localPortNumber":["8080"],"host":["toolkit.transferfamily.aws.com"]}'
 
 http://localhost:8080/idp
 

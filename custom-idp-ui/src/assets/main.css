@@ -32,6 +32,9 @@ a,
     transition: 0.4s;
   }
 
+  h4 {
+    padding-top: .5em;
+  }
 
 
   th {

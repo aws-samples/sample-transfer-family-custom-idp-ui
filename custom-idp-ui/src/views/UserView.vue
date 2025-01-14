@@ -4,12 +4,12 @@
       <h2>Existing Users</h2>
       <table>
         <thead>
-        <tr>
-          <th>Username</th>
-          <th>IdP Key</th>
-          <th>Module Type</th>
-          <th>Actions</th>
-        </tr>
+          <tr>
+            <th>Username</th>
+            <th>IdP Key</th>
+            <th>Module Type</th>
+            <th>Actions</th>
+          </tr>
         </thead>
         <tbody>
           <tr>
@@ -24,33 +24,78 @@
         </tbody>
       </table>
     </div>
-    <h2>{{operation}}</h2>
+    <h2>{{ operation }}</h2>
     <div class="user">
-      <form id="user-form" class="form-inline" v-on:submit.prevent="createUser()" v-if="idp_list.length > 0">
+      <form
+        id="user-form"
+        class="form-inline"
+        v-on:submit.prevent="createUser()"
+        v-if="idp_list.length > 0"
+      >
         <InputItem>
           <template #message>{{ errors.user }}</template>
           <template #label><label for="user">Username</label></template>
-          <input type="text" name="user" v-model="user" v-bind="user_attrs"/>
+          <input type="text" name="user" v-model="user" v-bind="user_attrs" />
         </InputItem>
         <InputItem>
           <template #message>{{ errors.identity_provider_key }}</template>
-          <template #label><label for="identity_provider_key">Identity Provider Key</label></template>
-          <select name="identity_provider_key" v-model="identity_provider_key" v-bind="identity_provider_key_attrs">
-            <option v-for="idp in idp_list" :value="idp.provider">{{idp.module}}: {{idp.provider}}</option>
+          <template #label
+            ><label for="identity_provider_key">Identity Provider Key</label></template
+          >
+          <select
+            name="identity_provider_key"
+            v-model="identity_provider_key"
+            v-bind="identity_provider_key_attrs"
+          >
+            <option v-for="idp in idp_list" :value="idp.provider">
+              {{ idp.module }}: {{ idp.provider }}
+            </option>
           </select>
         </InputItem>
-
+        <InputItem>
+          <template #message>{{ errors.config_Role }}</template>
+          <template #label><label for="role">IAM Role ARN</label></template>
+          <input type="text" name="role" v-model="Role" v-bind="Role_attrs" />
+        </InputItem>
+        <h4>Home Directory Type</h4>
+        <InputItem>
+          <template #message></template>
+          <template #label><label for="LOGICAL">LOGICAL</label></template>
+          <input
+            type="radio"
+            id="LOGICAL"
+            name="home_directory_type"
+            value="LOGICAL"
+            v-model="HomeDirectoryType"
+            v-bind="HomeDirectoryType_attrs"
+          />
+        </InputItem>
+        <InputItem>
+          <template #message></template>
+          <template #label><label for="PATH">PATH</label></template>
+          <input
+            type="radio"
+            id="PATH"
+            name="home_directory_type"
+            value="PATH"
+            v-model="HomeDirectoryType"
+            v-bind="HomeDirectoryType_attrs"
+          />
+        </InputItem>
+        <InputItem v-if="HomeDirectory_attrs.visible">
+          <template #message>{{ errors.config_HomeDirectory }}</template>
+          <template #label><label for="home_directory">Home Directory</label></template>
+          <input type="text" name="role" v-model="HomeDirectory" v-bind="HomeDirectory_attrs" />
+        </InputItem>
         <!--
           https://stackoverflow.com/questions/74534399/vue-3-create-dynamic-input
-          https://medium.com/@emperorbrains/vue-js-dynamic-forms-best-practices-and-techniques-a633a696283b
           https://codesandbox.io/p/sandbox/vmj3r80nxy?file=%2Fsrc%2FApp.vue%3A77%2C1
         -->
-        <InputItem>
-          <template #message>{{ errors.role }}</template>
-          <template #label><label for="role">IAM Role ARN</label></template>
-          <input type="text" name="role" v-model="role" v-bind="role_attrs"/>
-        </InputItem>
+        <h4>Home Directory Details</h4>
+        required
+        <h4>Posix Profiles</h4>
 
+        <h4>Public Keys</h4>
       </form>
       <div v-else>
         <p>There are no IDPs configured. Please create an IDP then add users.</p>
@@ -79,97 +124,85 @@ import { useForm } from 'vee-validate'
 import * as yup from 'yup'
 import { ref } from 'vue'
 
-const record = {
-  "user": {
-    "S": "jsmith"
-  },
-  "identity_provider_key": {
-    "S": "publickeys"
-  },
-  "config": {
-    "M": {
-      "HomeDirectoryDetails": {
-        "L": [
-          {
-            "M": {
-              "Entry": {
-                "S": "/s3files"
-              },
-              "Target": {
-                "S": "/[bucketname]/prefix/to/files"
-              }
-            }
-          },
-          {
-            "M": {
-              "Entry": {
-                "S": "/efs"
-              },
-              "Target": {
-                "S": "/fs-[efs-fs-id]"
-              }
-            }
-          }
-        ]
-      },
-      "HomeDirectoryType": {
-        "S": "LOGICAL"
-      },
-      "PosixProfile": {
-        "M": {
-          "Gid": {
-            "S": "1000"
-          },
-          "Uid": {
-            "S": "1000"
-          }
-        }
-      },
-      "PublicKeys": {
-        "SS": [
-          "ssh-ed25519 [PUBLICKEY]",
-          "ssh-rsa [PUBLICKEY]"
-        ]
-      },
-      "Role": {
-        "S": "arn:aws:iam::[AWS Account Id]:role/[Role Name]"
-      }
-    }
-  },
-  "ipv4_allow_list": {
-    "SS": [
-      "0.0.0.0/0"
-    ]
-  }
-};
-console.log(record);
-
 const operation = ref('Create New User')
 
 // build base level schema for any module type, then add the module specific conditional fields
-const schema = yup.object({
-  user: yup.string().required().label('Username'),
-  identity_provider_key: yup.string().required().label('Identity Provider Key'),
-  config_HomeDirectoryDetails_Entry: yup.string().required().label('Home Directory Entry'),
-  config_HomeDirectoryDetails_Target: yup.string().required().label('Home Directory Target'),
-  ipv4_allow_list: yup.string().required().label('IPv4 Allow List'),
-  role: yup.string().required().label('IAM Role ARN')
-})
+const schema = yup
+  .object({
+    user: yup.string().required().lowercase('Username must be lowercase').label('Username'),
+    identity_provider_key: yup.string().required().label('Identity Provider Key'),
+    ipv4_allow_list: yup.string().required().label('IPv4 Allow List'),
+    config_Role: yup.string().required().label('IAM Role ARN'),
+    config_HomeDirectoryType: yup.mixed().oneOf(['LOGICAL', 'PATH']).required(),
+    config_HomeDirectory: yup.string().when('config_HomeDirectoryType', {
+      is: 'LOGICAL',
+      then: (schema) => schema.required("Home Directory is required when type is LOGICAL"),
+      otherwise: (schema) => schema.notRequired()
+    }),
+    config_PosixProfile_Gid: yup.number().optional(),
+    config_PosixProfile_Uid: yup.number().optional(),
+    config_PublicKeys: yup.string().optional(),
+
+    // config_HomeDirectoryDetails_Entry: yup.string().required().label('Home Directory Entry'),
+    // config_HomeDirectoryDetails_Target: yup.string().required().label('Home Directory Target'),
+    // config_HomeDirectoryDetails_Regions: yup.string().required().label('Home Directory Regions'),
+  })
+  .strict(true)
 
 const { values, errors, defineField, handleSubmit } = useForm({
   validationSchema: schema
 })
 
 const [user, user_attrs] = defineField('user', {})
-const [identity_provider_key, identity_provider_key_attrs] = defineField('identity_provider_key', {})
+const [identity_provider_key, identity_provider_key_attrs] = defineField(
+  'identity_provider_key',
+  {}
+)
+const [Role, Role_attrs] = defineField('config_Role', {})
+const [HomeDirectoryType, HomeDirectoryType_attrs] = defineField('config_HomeDirectoryType', {})
+HomeDirectoryType.value = 'PATH'
+const [HomeDirectory, HomeDirectory_attrs] = defineField('config_HomeDirectory', {
+  props() {
+    return { visible: HomeDirectoryType.value === 'LOGICAL' }
+  }
+})
 // HomeDirectoryDetails is a map, and can have multiple entry/target value pairs
 // so you have to define the map to hold key/value pairs
-const [HomeDirectoryDetails_Entry, HomeDirectoryDetails_Entry_attrs] = defineField('config_HomeDirectoryDetails_Entry', {})
-const [HomeDirectoryDetails_Target, HomeDirectoryDetails_Target_attrs] = defineField('config_HomeDirectoryDetails_Target', {})
-const [ipv4_allow_list, ipv4_allow_list_attrs] = defineField('ipv4_allow_list', {})
-const [role, role_attrs] = defineField('role', {})
+const homeDirectoryDetails = ref([])
+const [HomeDirectoryDetail_Entry, HomeDirectoryDetail_Entry_attrs] = defineField(
+  'config_HomeDirectoryDetail_Entry',
+  {}
+)
+const [HomeDirectoryDetail_Target, HomeDirectoryDetail_Target_attrs] = defineField(
+  'config_HomeDirectoryDetail_Target',
+  {}
+)
+const [HomeDirectoryDetail_Region, HomeDirectoryDetail_Region_attrs] = defineField(
+  'config_HomeDirectoryDetail_Region',
+  {}
+)
 
-const createUser = handleSubmit(values => {
+const [ipv4_allow_list, ipv4_allow_list_attrs] = defineField('ipv4_allow_list', {})
+
+// todo: build UI dynamically, make it adding to a map
+function addHomeDirectoryDetails() {
+  homeDirectoryDetails.value.push({
+    Entry: HomeDirectoryDetail_Entry.value,
+    Target: HomeDirectoryDetail_Target.value,
+    Region: HomeDirectoryDetail_Region.value
+  })
+}
+
+addHomeDirectoryDetails()
+
+// todo: you have to have at least 1
+function removeHomeDirectoryDetails(index) {
+  if (homeDirectoryDetails.value.length > 1) {
+    homeDirectoryDetails.value.splice(index, 1)
+  }
+}
+
+const createUser = handleSubmit((values) => {
   console.log(values)
   putUser()
 })
@@ -180,7 +213,7 @@ async function putUser() {
       HomeDirectoryDetails: {},
       PosixProfile: {},
       PublicKeys: [],
-      Role: ""
+      Role: ''
     },
     ipv4_allow_list: []
   }
@@ -191,7 +224,6 @@ const load_idp_list = async () => {
   idp_list.value = await getIdps()
 }
 load_idp_list()
-
 
 function getIdps() {
   //console.log('getIdp: ' + provider)
@@ -214,5 +246,4 @@ function getIdps() {
   })
   return result
 }
-
 </script>
