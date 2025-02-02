@@ -66,6 +66,9 @@ class CustomIdpEcsStack(Stack):
                                      )
 
         runtime = lambda_.Runtime.PYTHON_3_11
+
+        # Todo: enable application signals -> https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-Application-Signals-Enable-Lambda.html
+
         idp_function = lambda_.Function(self, 'CustomIdpLambda',
                                         runtime=runtime,
                                         handler='manage_idps.handler',
@@ -111,7 +114,9 @@ class CustomIdpEcsStack(Stack):
         toolkit_domain = 'toolkit.transferfamily.aws.com'
         alb = elbv2.ApplicationLoadBalancer(self, 'CustomIdpLoadBalancer',
                                             vpc=vpc,
-                                            internet_facing=False
+                                            internet_facing=False,
+                                            #cross_zone_enabled=False,
+                                            # read up on this
                                             )
 
         zone = route53.PrivateHostedZone(self, 'CustomIdpHostedZone',
