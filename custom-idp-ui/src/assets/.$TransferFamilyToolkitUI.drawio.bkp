@@ -70,7 +70,7 @@
         <mxCell id="RRX_TgVdpecDcxbN7_SD-13" value="Docker Images" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=#ffffff;fillColor=#232F3E;dashed=0;verticalLabelPosition=middle;verticalAlign=bottom;align=center;html=1;whiteSpace=wrap;fontSize=10;fontStyle=1;spacing=3;shape=mxgraph.aws4.productIcon;prIcon=mxgraph.aws4.ecr;" parent="RRX_TgVdpecDcxbN7_SD-3" vertex="1">
           <mxGeometry x="640" y="45" width="80" height="100" as="geometry" />
         </mxCell>
-        <mxCell id="RRX_TgVdpecDcxbN7_SD-14" value="" style="endArrow=classic;html=1;rounded=0;" parent="RRX_TgVdpecDcxbN7_SD-3" source="RRX_TgVdpecDcxbN7_SD-5" target="RRX_TgVdpecDcxbN7_SD-13" edge="1">
+        <mxCell id="RRX_TgVdpecDcxbN7_SD-14" value="sig4" style="endArrow=classic;html=1;rounded=0;" parent="RRX_TgVdpecDcxbN7_SD-3" source="RRX_TgVdpecDcxbN7_SD-5" target="RRX_TgVdpecDcxbN7_SD-13" edge="1">
           <mxGeometry width="50" height="50" relative="1" as="geometry">
             <mxPoint x="620" y="260" as="sourcePoint" />
             <mxPoint x="670" y="210" as="targetPoint" />
@@ -94,7 +94,7 @@
             <mxPoint x="500" y="370" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="RRX_TgVdpecDcxbN7_SD-17" value="https" style="endArrow=classic;html=1;rounded=0;" parent="1" source="RRX_TgVdpecDcxbN7_SD-16" target="RRX_TgVdpecDcxbN7_SD-4" edge="1">
+        <mxCell id="RRX_TgVdpecDcxbN7_SD-17" value="" style="endArrow=classic;html=1;rounded=0;" parent="1" source="RRX_TgVdpecDcxbN7_SD-16" target="RRX_TgVdpecDcxbN7_SD-4" edge="1">
           <mxGeometry width="50" height="50" relative="1" as="geometry">
             <mxPoint x="450" y="280" as="sourcePoint" />
             <mxPoint x="500" y="230" as="targetPoint" />

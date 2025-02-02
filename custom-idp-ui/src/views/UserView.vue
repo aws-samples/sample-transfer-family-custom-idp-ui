@@ -8,17 +8,17 @@
             <th>Username</th>
             <th>IdP Key</th>
             <th>Module Type</th>
-            <th>Actions</th>
+            <th>Role</th>
           </tr>
         </thead>
         <tbody>
-          <tr>
-            <td>hardcoded</td>
-            <td>publickeys</td>
-            <td>Posix</td>
+          <tr v-for="user in user_list" :key="user['user']">
+            <td>{{ user.user }}</td>
+            <td>{{ user.identity_provider_key }}</td>
+            <td>{{ user.config.Role }}</td>
             <td>
-              <button>Edit</button>
-              <button>Delete</button>
+              <button v-on:click="editUser(user.user, user.identity_provider_key)">Edit or Copy</button>
+              <button v-on:click="deleteUser(user.user, user.identity_provider_key)">Delete</button>
             </td>
           </tr>
         </tbody>
@@ -87,6 +87,16 @@
           <template #label><label for="home_directory">Home Directory</label></template>
           <input type="text" name="role" v-model="HomeDirectory" v-bind="HomeDirectory_attrs" />
         </InputItem>
+        <input-item>
+          <template #message>{{ errors.ipv4_allow_list }}</template>
+          <template #label><label for="ipv4_allow_list">IPv4 Allow List</label></template>
+          <textarea
+            name="ipv4_allow_list"
+            placeholder="CIDR address per line"
+            v-model="ipv4_allow_list"
+            v-bind="ipv4_allow_list_attrs"
+          ></textarea>
+        </input-item>
         <!--
           https://stackoverflow.com/questions/74534399/vue-3-create-dynamic-input
           https://codesandbox.io/p/sandbox/vmj3r80nxy?file=%2Fsrc%2FApp.vue%3A77%2C1
@@ -96,6 +106,11 @@
         <h4>Posix Profiles</h4>
 
         <h4>Public Keys</h4>
+
+        <div id="submit">
+          <input id="form_submit" type="submit" value="Save" />
+          <input id="cancel" type="reset" onclick="window.location.reload()" value="Clear" />
+        </div>
       </form>
       <div v-else>
         <p>There are no IDPs configured. Please create an IDP then add users.</p>
@@ -115,6 +130,9 @@
     min-height: 100vh;
     display: flex;
   }
+  label {
+    vertical-align: top;
+  }
 }
 </style>
 
@@ -124,24 +142,37 @@ import { useForm } from 'vee-validate'
 import * as yup from 'yup'
 import { ref } from 'vue'
 
+const user_list = ref([])
+const load_user_list = async () => {
+  user_list.value = await getUser('')
+}
+load_user_list()
+
 const operation = ref('Create New User')
 
-// build base level schema for any module type, then add the module specific conditional fields
 const schema = yup
   .object({
     user: yup.string().required().lowercase('Username must be lowercase').label('Username'),
     identity_provider_key: yup.string().required().label('Identity Provider Key'),
-    ipv4_allow_list: yup.string().required().label('IPv4 Allow List'),
+    //ipv4_allow_list: yup.string().matches("^([0-9]{1,3}\\.){3}[0-9]{1,3}($|/(16|24))$", "Must be CIDR addresses seperated by line breaks").optional().label('IPv4 Allow List'),
+    ipv4_allow_list: yup
+      .string()
+      .matches(
+        /^(?:(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\/(?:[0-2]?[0-9]|3[0-2])(?:\r?\n)?)+$/,
+        'Must be CIDR addresses seperated by line breaks'
+      )
+      .optional()
+      .label('IPv4 Allow List'),
     config_Role: yup.string().required().label('IAM Role ARN'),
     config_HomeDirectoryType: yup.mixed().oneOf(['LOGICAL', 'PATH']).required(),
     config_HomeDirectory: yup.string().when('config_HomeDirectoryType', {
       is: 'LOGICAL',
-      then: (schema) => schema.required("Home Directory is required when type is LOGICAL"),
+      then: (schema) => schema.required('Home Directory is required when type is LOGICAL'),
       otherwise: (schema) => schema.notRequired()
     }),
     config_PosixProfile_Gid: yup.number().optional(),
     config_PosixProfile_Uid: yup.number().optional(),
-    config_PublicKeys: yup.string().optional(),
+    config_PublicKeys: yup.string().optional()
 
     // config_HomeDirectoryDetails_Entry: yup.string().required().label('Home Directory Entry'),
     // config_HomeDirectoryDetails_Target: yup.string().required().label('Home Directory Target'),
@@ -204,10 +235,10 @@ function removeHomeDirectoryDetails(index) {
 
 const createUser = handleSubmit((values) => {
   console.log(values)
-  putUser()
+  saveUser()
 })
 
-async function putUser() {
+async function saveUser() {
   const user = {
     config: {
       HomeDirectoryDetails: {},
@@ -217,6 +248,44 @@ async function putUser() {
     },
     ipv4_allow_list: []
   }
+
+  for (let [key, value] of Object.entries(values)) {
+    if (key.startsWith('config_')) {
+      const config_key = key.replace('config_', '')
+      user.config[config_key] = value
+    } else {
+      if (key === 'ipv4_allow_list') {
+        user.ipv4_allow_list = value.split('\n')
+      } else {
+        user[key] = value
+      }
+    }
+  }
+
+  let json = {}
+  try {
+    json = await putUser(user)
+  } catch (error) {
+    console.log(error)
+  } finally {
+    console.log('done')
+  }
+  window.location.reload()
+}
+
+async function putUser(user) {
+  const signal = AbortSignal.timeout(3000)
+  const url = 'http://localhost:8080/api/user/'
+  return await fetch(url, {
+    signal,
+    method: 'PUT',
+    mode: 'cors',
+    cache: 'no-cache',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(user)
+  })
 }
 
 const idp_list = ref([])
@@ -245,5 +314,60 @@ function getIdps() {
     }
   })
   return result
+}
+
+async function editUser(user_name, identity_provider_key) {
+  const user = await getUser(user_name, identity_provider_key)
+  operation.value = 'Edit or Copy IDP: ' + user.user
+  console.log(user)
+  identity_provider_key.value = user.identity_provider_key
+}
+
+function getUser(user) {
+  //console.log('getUser: ' + user)
+  const signal = AbortSignal.timeout(3000)
+  const url = 'http://localhost:8080/api/user/'
+  let result = fetch(url + user, {
+    signal,
+    method: 'GET',
+    mode: 'cors',
+    cache: 'no-cache',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  }).then((response) => {
+    if (response.ok) {
+      return response.json()
+    } else {
+      console.log('getUser ' + user + ' failure')
+    }
+  })
+  return result
+}
+
+function deleteUser(user, identity_provider_key) {
+  console.log('deleteUser: ' + user + ' from IdP ' + identity_provider_key)
+  const signal = AbortSignal.timeout(3000)
+  const url = 'http://localhost:8080/api/user/'
+  const querystring = '?provider=' + identity_provider_key
+  let result = fetch(url + user+querystring, {
+    signal,
+    method: 'DELETE',
+    mode: 'cors',
+    cache: 'no-cache',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  }).then((response) => {
+    if (response.ok) {
+      console.log('deleteUser success')
+      return response.json()
+    } else {
+      console.log('deleteUser failure')
+    }
+  })
+  console.log('delete result' + result)
+  user_list.value = user_list.value.filter((item) => item.user !== user)
+  setTimeout(() => load_user_list(), 250) // verbosely reload on delay
 }
 </script>

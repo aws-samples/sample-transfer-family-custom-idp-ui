@@ -1,0 +1,63 @@
+{
+  "user": {
+    "S": "jsmith"
+  },
+  "identity_provider_key": {
+    "S": "publickeys"
+  },
+  "config": {
+    "M": {
+      "HomeDirectoryDetails": {
+        "L": [
+          {
+            "M": {
+              "Entry": {
+                "S": "/s3files"
+              },
+              "Target": {
+                "S": "/[bucketname]/prefix/to/files"
+              }
+            }
+          },
+          {
+            "M": {
+              "Entry": {
+                "S": "/efs"
+              },
+              "Target": {
+                "S": "/fs-[efs-fs-id]"
+              }
+            }
+          }
+        ]
+      },
+      "HomeDirectoryType": {
+        "S": "LOGICAL"
+      },
+      "PosixProfile": {
+        "M": {
+          "Gid": {
+            "S": "1000"
+          },
+          "Uid": {
+            "S": "1000"
+          }
+        }
+      },
+      "PublicKeys": {
+        "SS": [
+          "ssh-ed25519 [PUBLICKEY]",
+          "ssh-rsa [PUBLICKEY]"
+        ]
+      },
+      "Role": {
+        "S": "arn:aws:iam::[AWS Account Id]:role/[Role Name]"
+      }
+    }
+  },
+  "ipv4_allow_list": {
+    "SS": [
+      "0.0.0.0/0"
+    ]
+  }
+}
