@@ -57,6 +57,11 @@
           <template #label><label for="role">IAM Role ARN</label></template>
           <input placeholder="arn:aws:iam::<account-id>:role/<role-name>" type="text" name="role" v-model="Role" v-bind="Role_attrs" />
         </InputItem>
+        <InputItem>
+          <template #message>{{ errors.config_argon2_hash }}</template>
+          <template #label><label for="argon2_hash">Argon2 Hash</label></template>
+          <input placeholder="$argon2i$v=19$m=4096,t=3,p=$argon2i$v=19$m=4096,t=3,p=XX" type="text" name="argon2_hash" v-model="argon2_hash" v-bind="argon2_hash_attrs" />
+        </InputItem>
         <h4>Home Directory Type</h4>
         <InputItem>
           <template #message></template>
@@ -174,6 +179,12 @@ const schema = yup
       .optional()
       .label('IPv4 Allow List'),
     config_Role: yup.string().required().label('IAM Role ARN'),
+    config_argon2_hash: yup.string().when('identity_provider_key', {  // has to be module type,
+      // have so sort to do this because will need it for several fields
+      is: 'ARGON',
+      then: (schema) => schema.required('Argon2 Hash is required when IDP module is ARGON'),
+      otherwise: (schema) => schema.notRequired()
+    }),
     config_HomeDirectoryType: yup.mixed().oneOf(['LOGICAL', 'PATH']).required(),
     config_HomeDirectory: yup.string().when('config_HomeDirectoryType', {
       is: 'LOGICAL',
