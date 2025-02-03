@@ -56,6 +56,7 @@
             ><label for="cognito_user_pool_region">Cognito User Pool Region</label></template
           >
           <input
+            placeholder="us-east-1"
             id="cognito_user_pool_region"
             type="text"
             v-model="cognito_user_pool_region"
@@ -65,7 +66,7 @@
         <InputItem v-if="server_attrs.visible">
           <template #message>{{ errors.config_server }}</template>
           <template #label><label for="server">LDAP Server</label></template>
-          <input id="server" type="text" v-model="server" v-bind="server_attrs" />
+          <input placeholder="fully qualified domain name" id="server" type="text" v-model="server" v-bind="server_attrs" />
         </InputItem>
 
         <InputItem v-if="search_base_attrs.visible">
@@ -116,6 +117,7 @@
             >
           </template>
           <input
+            placeholder="arn:aws:secretsmanager:<region>:<account-id>:<secret-name>"
             id="ldap_ssl_ca_secret_arn"
             type="text"
             v-bind="ldap_ssl_ca_secret_arn_attrs"
@@ -142,6 +144,7 @@
             ></template
           >
           <input
+            placeholder="arn:aws:secretsmanager:<region>:<account-id>:<secret-name>"
             id="ldap_service_account_secret_arn"
             type="text"
             v-bind="ldap_service_account_secret_arn_attrs"
@@ -149,6 +152,18 @@
           />
           <template #message>{{ errors.config_service_account_secret_arn }}</template>
         </InputItem>
+
+        <input-item v-if="ldap_allowed_groups_attrs.visible">
+          <template #message>{{ errors.ldap_allowed_groups }}</template>
+          <template #label><label for="ldap_allowed_groups">LDAP allowed groups</label></template>
+          <textarea
+            name="ldap_allowed_groups"
+            placeholder="One per line in DN Format: CN=Group Name,CN=Users,DC=domain2019,DC=local"
+            v-model="ldap_allowed_groups"
+            v-bind="ldap_allowed_groups_attrs"
+          ></textarea>
+        </input-item>
+
         <InputItem v-if="attributes_gid_attrs.visible">
           <template #label><label for="attributes_gid">PosixProfile Gid</label></template>
           <input
@@ -172,6 +187,7 @@
         <InputItem v-if="attributes_role_attrs.visible">
           <template #label><label for="attributes_role">Role</label></template>
           <input
+            placeholder="arn:aws:iam::<account-id>:role/<role-name>"
             id="attributes_role"
             type="text"
             v-bind="attributes_role_attrs"
@@ -182,6 +198,7 @@
         <InputItem v-if="attributes_policy_attrs.visible">
           <template #label><label for="attributes_policy">Policy</label></template>
           <input
+            placeholder="ARN or JSON/YAML statement?"
             id="attributes_policy"
             type="text"
             v-bind="attributes_policy_attrs"
@@ -210,6 +227,7 @@
         <InputItem v-if="app_secret_arn_attrs.visible">
           <template #label><label for="app_secret_arn">Entra ID Client Secret ARN</label></template>
           <input
+            placeholder="arn:aws:secretsmanager:<region>:<account-id>:<secret-name>"
             id="app_secret_arn"
             type="text"
             v-bind="app_secret_arn_attrs"
@@ -230,7 +248,7 @@
         <InputItem v-if="okta_domain_attrs.visible">
           <template #message>{{ errors.okta_domain }}</template>
           <template #label><label for="">Okta Domain</label></template>
-          <input id="" type="text" v-bind="okta_domain_attrs" v-model="okta_domain" />
+          <input placeholder="fully qualified domain name" id="" type="text" v-bind="okta_domain_attrs" v-model="okta_domain" />
         </InputItem>
         <InputItem v-if="okta_app_client_id_attrs.visible">
           <template #message>{{ errors.okta_app_client_id }}</template>
@@ -240,7 +258,7 @@
         <InputItem v-if="okta_redirect_url_attrs.visible">
           <template #message>{{ errors.okta_redirect_url }}</template>
           <template #label><label for="">Okta Redirect URL</label></template>
-          <input id="" type="text" v-bind="okta_redirect_url_attrs" v-model="okta_redirect_url" />
+          <input placeholder="fully qualified domain name" id="" type="text" v-bind="okta_redirect_url_attrs" v-model="okta_redirect_url" />
         </InputItem>
         <div id="submit">
           <input id="form_submit" type="submit" value="Save"/>
@@ -261,6 +279,12 @@
   .idp {
     min-height: 100vh;
     display: flex;
+  }
+  input[type="text"] {
+    width: 25em;
+  }
+  textarea {
+    width: 40em;
   }
 }
 </style>
@@ -334,8 +358,7 @@ const schema = yup.object({
   config_ssl_verify: yup.boolean(),
   config_ldap_ssl_ca_secret_arn: yup.string().optional(),
   config_ldap_service_account_secret_arn: yup.string().optional(),
-  // config/ldap_allowed_groups --> implement the ability to add a set of config/ldap_allowed_groups entries
-  // https://github.com/aws-samples/toolkit-for-aws-transfer-family/tree/main/solutions/custom-idp#dynamodb-record-schema-4
+  config_ldap_allowed_groups: yup.string().optional(),
 
   // okta
   okta_domain: yup.string().when('module', {
@@ -426,6 +449,11 @@ const [ldap_service_account_secret_arn, ldap_service_account_secret_arn_attrs] =
       return { visible: module.value === 'ldap' && public_key_support.value === true }
     }
   })
+const [ldap_allowed_groups, ldap_allowed_groups_attrs] = defineField('config_ldap_allowed_groups', {
+    props() {
+      return { visible: module.value === 'ldap' }
+    }
+  })
 const [attributes_gid, attributes_gid_attrs] = defineField('config_attributes_gid', {
   props() {
     return { visible: module.value === 'ldap' || module.value === 'okta' }
@@ -503,7 +531,11 @@ async function saveIdp() {
     if (key.startsWith('config_attributes_')) {
       idp.config.attributes[key.replace('config_attributes_', '')] = value
     } else if (key.startsWith('config_')) {
-      idp.config[key.replace('config_', '')] = value
+      if (key === 'config_ldap_allowed_groups') {
+        idp.config[key.replace('config_', '')] = value.split('\n')
+      } else {
+        idp.config[key.replace('config_', '')] = value
+      }
     } else {
       idp[key] = value
     }
@@ -537,6 +569,7 @@ async function editIdp(provider_name) {
   ssl_verify.value = idp.config.ssl_verify
   ldap_ssl_ca_secret_arn.value = idp.config.ldap_ssl_ca_secret_arn
   ldap_service_account_secret_arn.value = idp.config.ldap_service_account_secret_arn
+  ldap_allowed_groups.value = idp.config.ldap_allowed_groups.join('\n')
   attributes_gid.value  = idp.config.attributes.gid
   attributes_uid.value  = idp.config.attributes.uid
   attributes_role.value = idp.config.attributes.role
@@ -549,7 +582,6 @@ async function editIdp(provider_name) {
   okta_domain.value = idp.okta_domain
   okta_app_client_id.value = idp.okta_app_client_id
   okta_redirect_url.value  = idp.okta_redirect_url
-
 }
 
 

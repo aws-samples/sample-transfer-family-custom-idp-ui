@@ -35,7 +35,7 @@
         <InputItem>
           <template #message>{{ errors.user }}</template>
           <template #label><label for="user">Username</label></template>
-          <input type="text" name="user" v-model="user" v-bind="user_attrs" />
+          <input placeholder="in lowercase" type="text" name="user" v-model="user" v-bind="user_attrs" />
         </InputItem>
         <InputItem>
           <template #message>{{ errors.identity_provider_key }}</template>
@@ -45,17 +45,17 @@
           <select
             name="identity_provider_key"
             v-model="identity_provider_key"
-            v-bind="identity_provider_key_attrs"
-          >
-            <option v-for="idp in idp_list" :value="idp.provider">
-              {{ idp.module }}: {{ idp.provider }}
+            v-bind="identity_provider_key_attrs">
+            <option disabled value="">Choose IDP</option>
+            <option v-for="option in idp_list" :value="option.provider" :key="option.provider">
+              {{ option.module }}: {{ option.provider }}
             </option>
           </select>
         </InputItem>
         <InputItem>
           <template #message>{{ errors.config_Role }}</template>
           <template #label><label for="role">IAM Role ARN</label></template>
-          <input type="text" name="role" v-model="Role" v-bind="Role_attrs" />
+          <input placeholder="arn:aws:iam::<account-id>:role/<role-name>" type="text" name="role" v-model="Role" v-bind="Role_attrs" />
         </InputItem>
         <h4>Home Directory Type</h4>
         <InputItem>
@@ -85,7 +85,7 @@
         <InputItem v-if="HomeDirectory_attrs.visible">
           <template #message>{{ errors.config_HomeDirectory }}</template>
           <template #label><label for="home_directory">Home Directory</label></template>
-          <input type="text" name="role" v-model="HomeDirectory" v-bind="HomeDirectory_attrs" />
+          <input placeholder="S3 or EFS path" type="text" name="role" v-model="HomeDirectory" v-bind="HomeDirectory_attrs" />
         </InputItem>
         <input-item>
           <template #message>{{ errors.ipv4_allow_list }}</template>
@@ -106,6 +106,13 @@
         <h4>Posix Profiles</h4>
 
         <h4>Public Keys</h4>
+        <button type="button" @click="push('')">Add Key</button>
+        <div v-for="(field, index) in key_fields" :key="field.key">
+          <input-item>
+            <textarea name="public_keys{{index}}" v-model="field.value"></textarea>
+            <button type="button" @click="remove(index)">Remove Key</button>
+          </input-item>
+        </div>
 
         <div id="submit">
           <input id="form_submit" type="submit" value="Save" />
@@ -133,18 +140,21 @@
   label {
     vertical-align: top;
   }
+  input[type="text"] {
+    width: 25em;
+  }
 }
 </style>
 
 <script setup lang="ts">
 import InputItem from '../components/InputItem.vue'
-import { useForm } from 'vee-validate'
+import { useForm, useFieldArray } from 'vee-validate'
 import * as yup from 'yup'
 import { ref } from 'vue'
 
 const user_list = ref([])
 const load_user_list = async () => {
-  user_list.value = await getUser('')
+  user_list.value = await getUser('', '')
 }
 load_user_list()
 
@@ -172,16 +182,24 @@ const schema = yup
     }),
     config_PosixProfile_Gid: yup.number().optional(),
     config_PosixProfile_Uid: yup.number().optional(),
-    config_PublicKeys: yup.string().optional()
+    config_PublicKeys: yup.array().of(yup.string().required()).optional(),
 
-    // config_HomeDirectoryDetails_Entry: yup.string().required().label('Home Directory Entry'),
-    // config_HomeDirectoryDetails_Target: yup.string().required().label('Home Directory Target'),
-    // config_HomeDirectoryDetails_Regions: yup.string().required().label('Home Directory Regions'),
   })
   .strict(true)
 
 const { values, errors, defineField, handleSubmit } = useForm({
-  validationSchema: schema
+  validationSchema: schema,
+  initialValues: {
+    user: '',
+    identity_provider_key: '',
+    ipv4_allow_list: '0.0.0.0/0',
+    config_Role: '',
+    config_HomeDirectoryType: '',
+    config_HomeDirectory: '',
+    config_PosixProfile_Gid: '',
+    config_PosixProfile_Uid: '',
+    config_PublicKeys: ['']
+  }
 })
 
 const [user, user_attrs] = defineField('user', {})
@@ -197,41 +215,10 @@ const [HomeDirectory, HomeDirectory_attrs] = defineField('config_HomeDirectory',
     return { visible: HomeDirectoryType.value === 'LOGICAL' }
   }
 })
-// HomeDirectoryDetails is a map, and can have multiple entry/target value pairs
-// so you have to define the map to hold key/value pairs
-const homeDirectoryDetails = ref([])
-const [HomeDirectoryDetail_Entry, HomeDirectoryDetail_Entry_attrs] = defineField(
-  'config_HomeDirectoryDetail_Entry',
-  {}
-)
-const [HomeDirectoryDetail_Target, HomeDirectoryDetail_Target_attrs] = defineField(
-  'config_HomeDirectoryDetail_Target',
-  {}
-)
-const [HomeDirectoryDetail_Region, HomeDirectoryDetail_Region_attrs] = defineField(
-  'config_HomeDirectoryDetail_Region',
-  {}
-)
 
+const {fields: key_fields, remove, push} = useFieldArray('config_PublicKeys')
 const [ipv4_allow_list, ipv4_allow_list_attrs] = defineField('ipv4_allow_list', {})
 
-// todo: build UI dynamically, make it adding to a map
-function addHomeDirectoryDetails() {
-  homeDirectoryDetails.value.push({
-    Entry: HomeDirectoryDetail_Entry.value,
-    Target: HomeDirectoryDetail_Target.value,
-    Region: HomeDirectoryDetail_Region.value
-  })
-}
-
-addHomeDirectoryDetails()
-
-// todo: you have to have at least 1
-function removeHomeDirectoryDetails(index) {
-  if (homeDirectoryDetails.value.length > 1) {
-    homeDirectoryDetails.value.splice(index, 1)
-  }
-}
 
 const createUser = handleSubmit((values) => {
   console.log(values)
@@ -323,11 +310,12 @@ async function editUser(user_name, identity_provider_key) {
   identity_provider_key.value = user.identity_provider_key
 }
 
-function getUser(user) {
+async function getUser(user, identity_provider_key) {
   //console.log('getUser: ' + user)
   const signal = AbortSignal.timeout(3000)
   const url = 'http://localhost:8080/api/user/'
-  let result = fetch(url + user, {
+  const querystring = '?provider=' + identity_provider_key
+  return fetch(url + user+querystring, {
     signal,
     method: 'GET',
     mode: 'cors',
@@ -342,7 +330,6 @@ function getUser(user) {
       console.log('getUser ' + user + ' failure')
     }
   })
-  return result
 }
 
 function deleteUser(user, identity_provider_key) {
