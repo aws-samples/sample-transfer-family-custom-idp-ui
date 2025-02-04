@@ -38,14 +38,20 @@
           <input placeholder="in lowercase" type="text" name="user" v-model="user" v-bind="user_attrs" />
         </InputItem>
         <InputItem>
-          <template #message>{{ errors.identity_provider_key }}</template>
+          <template #message>{{ errors.identity_provider_key }}
+          <span v-if="errors.identity_provider_module">
+            <br />{{ errors.identity_provider_module }}
+          </span>
+          </template>
           <template #label
             ><label for="identity_provider_key">Identity Provider Key</label></template
           >
           <select
+            id="identity_provider_key"
             name="identity_provider_key"
             v-model="identity_provider_key"
-            v-bind="identity_provider_key_attrs">
+            v-bind="identity_provider_key_attrs"
+            v-on:change="setIdpModule">
             <option disabled value="">Choose IDP</option>
             <option v-for="option in idp_list" :value="option.provider" :key="option.provider">
               {{ option.module }}: {{ option.provider }}
@@ -57,7 +63,7 @@
           <template #label><label for="role">IAM Role ARN</label></template>
           <input placeholder="arn:aws:iam::<account-id>:role/<role-name>" type="text" name="role" v-model="Role" v-bind="Role_attrs" />
         </InputItem>
-        <InputItem>
+        <InputItem v-if="argon2_hash_attrs.visible">
           <template #message>{{ errors.config_argon2_hash }}</template>
           <template #label><label for="argon2_hash">Argon2 Hash</label></template>
           <input placeholder="$argon2i$v=19$m=4096,t=3,p=$argon2i$v=19$m=4096,t=3,p=XX" type="text" name="argon2_hash" v-model="argon2_hash" v-bind="argon2_hash_attrs" />
@@ -152,6 +158,7 @@
 </style>
 
 <script setup lang="ts">
+
 import InputItem from '../components/InputItem.vue'
 import { useForm, useFieldArray } from 'vee-validate'
 import * as yup from 'yup'
@@ -169,7 +176,7 @@ const schema = yup
   .object({
     user: yup.string().required().lowercase('Username must be lowercase').label('Username'),
     identity_provider_key: yup.string().required().label('Identity Provider Key'),
-    //ipv4_allow_list: yup.string().matches("^([0-9]{1,3}\\.){3}[0-9]{1,3}($|/(16|24))$", "Must be CIDR addresses seperated by line breaks").optional().label('IPv4 Allow List'),
+    identity_provider_module: yup.string().required().label('Your IdP must be for a valid IdP module'),
     ipv4_allow_list: yup
       .string()
       .matches(
@@ -179,10 +186,9 @@ const schema = yup
       .optional()
       .label('IPv4 Allow List'),
     config_Role: yup.string().required().label('IAM Role ARN'),
-    config_argon2_hash: yup.string().when('identity_provider_key', {  // has to be module type,
-      // have so sort to do this because will need it for several fields
-      is: 'ARGON',
-      then: (schema) => schema.required('Argon2 Hash is required when IDP module is ARGON'),
+    config_argon2_hash: yup.string().when('identity_provider_module', {
+      is: 'argon2',
+      then: (schema) => schema.required('Argon2 Hash is required when IdP module is Argon2'),
       otherwise: (schema) => schema.notRequired()
     }),
     config_HomeDirectoryType: yup.mixed().oneOf(['LOGICAL', 'PATH']).required(),
@@ -203,10 +209,12 @@ const { values, errors, defineField, handleSubmit } = useForm({
   initialValues: {
     user: '',
     identity_provider_key: '',
+    identity_provider_module: '',
     ipv4_allow_list: '0.0.0.0/0',
     config_Role: '',
     config_HomeDirectoryType: '',
     config_HomeDirectory: '',
+    config_argon2_hash: '',
     config_PosixProfile_Gid: '',
     config_PosixProfile_Uid: '',
     config_PublicKeys: ['']
@@ -218,7 +226,13 @@ const [identity_provider_key, identity_provider_key_attrs] = defineField(
   'identity_provider_key',
   {}
 )
+const [identity_provider_module] = defineField('identity_provider_module', {})
 const [Role, Role_attrs] = defineField('config_Role', {})
+const [argon2_hash, argon2_hash_attrs] = defineField('config_argon2_hash', {
+  props() {
+    return { visible: identity_provider_module.value === 'argon2' }
+  }
+})
 const [HomeDirectoryType, HomeDirectoryType_attrs] = defineField('config_HomeDirectoryType', {})
 HomeDirectoryType.value = 'PATH'
 const [HomeDirectory, HomeDirectory_attrs] = defineField('config_HomeDirectory', {
@@ -230,11 +244,15 @@ const [HomeDirectory, HomeDirectory_attrs] = defineField('config_HomeDirectory',
 const {fields: key_fields, remove, push} = useFieldArray('config_PublicKeys')
 const [ipv4_allow_list, ipv4_allow_list_attrs] = defineField('ipv4_allow_list', {})
 
-
 const createUser = handleSubmit((values) => {
   console.log(values)
   saveUser()
 })
+
+function setIdpModule(event) {
+  identity_provider_module.value = event.target.selectedOptions[0].text.split(":")[0]
+  console.log('form mode is for IdP module ' + identity_provider_module.value)
+}
 
 async function saveUser() {
   const user = {
