@@ -35,7 +35,7 @@
         <InputItem>
           <template #message>{{ errors.user }}</template>
           <template #label><label for="user">Username</label></template>
-          <input placeholder="in lowercase" type="text" name="user" v-model="user" v-bind="user_attrs" />
+          <input placeholder="in lowercase" type="text" id="user" v-model="user" v-bind="user_attrs" />
         </InputItem>
         <InputItem>
           <template #message>{{ errors.identity_provider_key }}
@@ -61,12 +61,12 @@
         <InputItem>
           <template #message>{{ errors.config_Role }}</template>
           <template #label><label for="role">IAM Role ARN</label></template>
-          <input placeholder="arn:aws:iam::<account-id>:role/<role-name>" type="text" name="role" v-model="Role" v-bind="Role_attrs" />
+          <input placeholder="arn:aws:iam::<account-id>:role/<role-name>" type="text" id="role" v-model="Role" v-bind="Role_attrs" />
         </InputItem>
         <InputItem v-if="argon2_hash_attrs.visible">
           <template #message>{{ errors.config_argon2_hash }}</template>
           <template #label><label for="argon2_hash">Argon2 Hash</label></template>
-          <input placeholder="$argon2i$v=19$m=4096,t=3,p=$argon2i$v=19$m=4096,t=3,p=XX" type="text" name="argon2_hash" v-model="argon2_hash" v-bind="argon2_hash_attrs" />
+          <input placeholder="$argon2i$v=19$m=4096,t=3,p=$argon2i$v=19$m=4096,t=3,p=XX" type="text" id="argon2_hash" v-model="argon2_hash" v-bind="argon2_hash_attrs" />
         </InputItem>
         <h4>Home Directory Type</h4>
         <InputItem>
@@ -102,7 +102,7 @@
           <template #message>{{ errors.ipv4_allow_list }}</template>
           <template #label><label for="ipv4_allow_list">IPv4 Allow List</label></template>
           <textarea
-            name="ipv4_allow_list"
+            id="ipv4_allow_list"
             placeholder="CIDR address per line"
             v-model="ipv4_allow_list"
             v-bind="ipv4_allow_list_attrs"
@@ -115,16 +115,16 @@
         <h4>Home Directory Details</h4>
         required
         <h4>Posix Profiles</h4>
-
+        optional
         <h4>Public Keys</h4>
-        <button type="button" @click="push('')">Add Key</button>
+
         <div v-for="(field, index) in key_fields" :key="field.key">
           <input-item>
-            <textarea name="public_keys{{index}}" v-model="field.value"></textarea>
-            <button type="button" @click="remove(index)">Remove Key</button>
+            <textarea name="public_keys{{index}}" v-model.lazy="key_fields[index].value"></textarea>
+            <button type="button" @click="keyRemove(index)">Remove Key</button>
           </input-item>
         </div>
-
+        <button type="button" @click="keyPush('')">Add Key</button>
         <div id="submit">
           <input id="form_submit" type="submit" value="Save" />
           <input id="cancel" type="reset" onclick="window.location.reload()" value="Clear" />
@@ -197,9 +197,9 @@ const schema = yup
       then: (schema) => schema.required('Home Directory is required when type is LOGICAL'),
       otherwise: (schema) => schema.notRequired()
     }),
-    config_PosixProfile_Gid: yup.number().optional(),
-    config_PosixProfile_Uid: yup.number().optional(),
-    config_PublicKeys: yup.array().of(yup.string().required()).optional(),
+    config_PosixProfile_Gid: yup.string().optional(),
+    config_PosixProfile_Uid: yup.string().optional(),
+    //config_PublicKeys: yup.array().of(yup.string().required()).optional(),
 
   })
   .strict(true)
@@ -212,12 +212,12 @@ const { values, errors, defineField, handleSubmit } = useForm({
     identity_provider_module: '',
     ipv4_allow_list: '0.0.0.0/0',
     config_Role: '',
-    config_HomeDirectoryType: '',
-    config_HomeDirectory: '',
-    config_argon2_hash: '',
+    config_HomeDirectoryType: 'PATH',
+    config_HomeDirectory: null,
+    config_argon2_hash: null,
     config_PosixProfile_Gid: '',
     config_PosixProfile_Uid: '',
-    config_PublicKeys: ['']
+    config_PublicKeys: []
   }
 })
 
@@ -241,7 +241,7 @@ const [HomeDirectory, HomeDirectory_attrs] = defineField('config_HomeDirectory',
   }
 })
 
-const {fields: key_fields, remove, push} = useFieldArray('config_PublicKeys')
+const {fields: key_fields, remove: keyRemove, push: keyPush, replace: keyReplace} = useFieldArray('config_PublicKeys')
 const [ipv4_allow_list, ipv4_allow_list_attrs] = defineField('ipv4_allow_list', {})
 
 const createUser = handleSubmit((values) => {
@@ -257,8 +257,8 @@ function setIdpModule(event) {
 async function saveUser() {
   const user = {
     config: {
-      HomeDirectoryDetails: {},
-      PosixProfile: {},
+      HomeDirectoryDetails: [{}],
+      PosixProfile: [{}],
       PublicKeys: [],
       Role: ''
     },
@@ -266,6 +266,7 @@ async function saveUser() {
   }
 
   for (let [key, value] of Object.entries(values)) {
+    console.log(key, value)
     if (key.startsWith('config_')) {
       const config_key = key.replace('config_', '')
       user.config[config_key] = value
@@ -332,11 +333,24 @@ function getIdps() {
   return result
 }
 
-async function editUser(user_name, identity_provider_key) {
-  const user = await getUser(user_name, identity_provider_key)
-  operation.value = 'Edit or Copy IDP: ' + user.user
-  console.log(user)
-  identity_provider_key.value = user.identity_provider_key
+async function editUser(user_name, identity_provider) {
+  const user_record = await getUser(user_name, identity_provider)
+  operation.value = 'Edit or Copy IDP: ' + user_record.user
+  user.value = user_record.user
+  identity_provider_key.value = user_record.identity_provider_key
+  identity_provider_module.value = idp_list.value.find((idp) => idp.provider === user_record.identity_provider_key).module
+  ipv4_allow_list.value = user_record.ipv4_allow_list.join('\n')
+  Role.value = user_record.config.Role
+  HomeDirectoryType.value = user_record.config.HomeDirectoryType
+  HomeDirectory.value = user_record.config.HomeDirectory
+
+  // public keys bug - keys list not hydrating, have to solve this to solve all collection fields
+
+    keyReplace(user_record.config.PublicKeys)
+    //values.config_PublicKeys.push(key)
+
+  console.log(key_fields.value)
+
 }
 
 async function getUser(user, identity_provider_key) {
