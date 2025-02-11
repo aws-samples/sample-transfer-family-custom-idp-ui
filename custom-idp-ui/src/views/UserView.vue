@@ -108,19 +108,64 @@
             v-bind="ipv4_allow_list_attrs"
           ></textarea>
         </input-item>
-        <!--
-          https://stackoverflow.com/questions/74534399/vue-3-create-dynamic-input
-          https://codesandbox.io/p/sandbox/vmj3r80nxy?file=%2Fsrc%2FApp.vue%3A77%2C1
-        -->
-        <h4>Home Directory Details</h4>
-        required
-        <h4>Posix Profiles</h4>
-        optional
-        <h4>Public Keys</h4>
 
-        <div v-for="(field, index) in key_fields" :key="field.key">
+        <h4>Home Directory Details</h4>
+        <div v-for="(field, index) in homeFields" :key="field.key">
+          <button type="button" @click="homeRemove(index)">Remove Detail</button>
           <input-item>
-            <textarea name="public_keys{{index}}" v-model.lazy="key_fields[index].value"></textarea>
+            <template #label><label :for="'entry' + index">Entry</label></template>
+            <input
+              type="text"
+              :id="'entry' + index"
+              v-model.lazy="homeFields[index].value['Entry']"
+            />
+          </input-item>
+          <input-item>
+            <template #label><label :for="'target' + index">Target</label></template>
+            <input
+              type="text"
+              :id="'target' + index"
+              v-model.lazy="homeFields[index].value['Target']"
+            />
+          </input-item>
+          <input-item>
+          <template #label><label :for="'regions' + index">Allowed Regions</label></template>
+          <textarea
+            :id="'regions' + index"
+            placeholder="One region code per line"
+            v-model="homeFields[index].value['regions']"
+          ></textarea>
+        </input-item>
+        </div>
+        <button type="button" @click="homePush('')">Add Home Directory Detail</button>
+
+        <h4>Posix Profiles</h4>
+        <div v-for="(field, index) in posixFields" :key="field.key">
+           <input-item>
+            <template #label><label :for="'gid' + index">Gid</label></template>
+            <input
+              type="text"
+              :id="'gid' + index"
+              v-model.lazy="posixFields[index].value['Gid']"
+            />
+          </input-item>
+          <input-item>
+            <template #label><label :for="'uid' + index">Uid</label></template>
+            <input
+              type="text"
+              :id="'uid' + index"
+              v-model.lazy="posixFields[index].value['Uid']"
+            />
+          </input-item>
+          <button type="button" @click="posixRemove(index)">Remove Detail</button>
+        </div>
+        <button type="button" @click="posixPush('')">Add Posix Profile</button>
+
+
+        <h4>Public Keys</h4>
+        <div v-for="(field, index) in keyFields" :key="field.key">
+          <input-item>
+            <textarea name="public_keys{{index}}" v-model.lazy="keyFields[index].value"></textarea>
             <button type="button" @click="keyRemove(index)">Remove Key</button>
           </input-item>
         </div>
@@ -199,7 +244,7 @@ const schema = yup
     }),
     config_PosixProfile_Gid: yup.string().optional(),
     config_PosixProfile_Uid: yup.string().optional(),
-    //config_PublicKeys: yup.array().of(yup.string().required()).optional(),
+    
 
   })
   .strict(true)
@@ -215,9 +260,9 @@ const { values, errors, defineField, handleSubmit } = useForm({
     config_HomeDirectoryType: 'PATH',
     config_HomeDirectory: null,
     config_argon2_hash: null,
-    config_PosixProfile_Gid: '',
-    config_PosixProfile_Uid: '',
-    config_PublicKeys: []
+    config_HomeDirectoryDetails: [{}],
+    config_PosixProfile: [{}],
+    config_PublicKeys: [],
   }
 })
 
@@ -241,7 +286,10 @@ const [HomeDirectory, HomeDirectory_attrs] = defineField('config_HomeDirectory',
   }
 })
 
-const {fields: key_fields, remove: keyRemove, push: keyPush, replace: keyReplace} = useFieldArray('config_PublicKeys')
+const {fields: homeFields, remove: homeRemove, push: homePush, replace: homeReplace} = useFieldArray('config_HomeDirectoryDetails')
+const {fields: posixFields, remove: posixRemove, push: posixPush, replace: posixReplace} = useFieldArray('config_PosixProfile')
+
+const {fields: keyFields, remove: keyRemove, push: keyPush, replace: keyReplace} = useFieldArray('config_PublicKeys')
 const [ipv4_allow_list, ipv4_allow_list_attrs] = defineField('ipv4_allow_list', {})
 
 const createUser = handleSubmit((values) => {
@@ -343,14 +391,9 @@ async function editUser(user_name, identity_provider) {
   Role.value = user_record.config.Role
   HomeDirectoryType.value = user_record.config.HomeDirectoryType
   HomeDirectory.value = user_record.config.HomeDirectory
-
-  // public keys bug - keys list not hydrating, have to solve this to solve all collection fields
-
-    keyReplace(user_record.config.PublicKeys)
-    //values.config_PublicKeys.push(key)
-
-  console.log(key_fields.value)
-
+  keyReplace(user_record.config.PublicKeys)
+  homeReplace(user_record.config.HomeDirectoryDetails)
+  posixReplace(user_record.config.PosixProfile)
 }
 
 async function getUser(user, identity_provider_key) {
