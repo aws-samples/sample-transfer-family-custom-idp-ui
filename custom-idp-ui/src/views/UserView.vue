@@ -157,7 +157,7 @@
               v-model.lazy="posixFields[index].value['Uid']"
             />
           </input-item>
-          <button type="button" @click="posixRemove(index)">Remove Detail</button>
+          <button type="button" @click="posixRemove(index)">Remove Profile</button>
         </div>
         <button type="button" @click="posixPush('')">Add Posix Profile</button>
 
