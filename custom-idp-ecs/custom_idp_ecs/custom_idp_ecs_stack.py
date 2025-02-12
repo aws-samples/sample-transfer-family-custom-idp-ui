@@ -9,8 +9,7 @@ from aws_cdk import (
     aws_lambda as lambda_,
     aws_dynamodb as ddb,
     aws_route53 as route53,
-    aws_route53_targets as route53_targets,
-    aws_certificatemanager as acm
+    aws_route53_targets as route53_targets
 )
 import aws_cdk as cdk
 import os

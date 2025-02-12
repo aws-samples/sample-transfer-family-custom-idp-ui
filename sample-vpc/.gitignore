@@ -8,3 +8,15 @@ __pycache__
 # CDK asset staging directory
 .cdk.staging
 cdk.out
+
+.DS_Store
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
