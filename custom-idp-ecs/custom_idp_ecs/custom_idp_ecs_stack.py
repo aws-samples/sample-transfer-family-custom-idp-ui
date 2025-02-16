@@ -8,6 +8,7 @@ from aws_cdk import (
     aws_elasticloadbalancingv2_targets as elbv2_targets,
     aws_lambda as lambda_,
     aws_dynamodb as ddb,
+    aws_iam as iam,
     aws_route53 as route53,
     aws_route53_targets as route53_targets
 )
@@ -105,10 +106,36 @@ class CustomIdpEcsStack(Stack):
         idp_function.add_layers(powertools_layer)
         user_function.add_layers(powertools_layer)
 
-        ddb.Table.from_table_name(self, 'idpTable', table_name='transferidp_identity_providers').grant_read_write_data(
-            idp_function)
-        ddb.Table.from_table_name(self, 'userTable', table_name='transferidp_users').grant_read_write_data(
-            user_function)
+        idp_table = ddb.Table.from_table_name(self, 'idpTable', table_name='transferidp_identity_providers')
+        idp_table.grant_read_write_data(idp_function)
+        user_table = ddb.Table.from_table_name(self, 'userTable', table_name='transferidp_users')
+        user_table.grant_read_write_data(user_function)
+
+        ddb_endpoint = vpc.add_gateway_endpoint("DynamoDbGatewayEndpoint",
+                                                     service=ec2.GatewayVpcEndpointAwsService.DYNAMODB)
+        ddb_endpoint.add_to_policy(iam.PolicyStatement(
+            actions=['dynamodb:DeleteItem', 'dynamodb:GetItem', 'dynamodb:UpdateItem', 'dynamodb:PutItem',
+                     'dynamodb:Query', 'dynamodb:Scan'],
+            principals=[iam.ArnPrincipal(idp_function.role.role_arn),
+                        iam.ArnPrincipal(user_function.role.role_arn),
+                        iam.ServicePrincipal('lambda.amazonaws.com'),
+                        iam.AnyPrincipal() # because I'm stuck
+                        ],
+            resources=[idp_table.table_arn, user_table.table_arn]  # if multi-region add regional ARNs
+        ))
+
+        # needed to pull ECR images
+        s3_endpoint = vpc.add_gateway_endpoint("S3GatewayEndpoint", service=ec2.GatewayVpcEndpointAwsService.S3)
+        s3_endpoint.add_to_policy(iam.PolicyStatement(
+            actions=['*'],  # scope to S3 crud operations for TF server
+            principals=[iam.AccountPrincipal(account_id=self.account),
+                        iam.ServicePrincipal("ecs-tasks.amazonaws.com"),
+                        iam.ArnPrincipal(task_definition.execution_role.role_arn),
+                        iam.AnyPrincipal() # because I'm stuck
+                        ],
+            # scope to TF server
+            resources=['*']  # scope to needed buckets
+        ))
 
         toolkit_domain = 'toolkit.transferfamily.aws.com'
         alb = elbv2.ApplicationLoadBalancer(self, 'CustomIdpLoadBalancer',

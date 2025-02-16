@@ -4,7 +4,6 @@ from aws_cdk import (
     Tags,
     Stack,
     aws_ec2 as ec2,
-    aws_dynamodb as ddb,
     aws_iam as iam
 )
 from constructs import Construct
@@ -39,23 +38,6 @@ class SampleVpcStack(Stack):
             # Tags on endpoints aren't supported yet by Cfn, forward-looking attempt here
             Tags.of(interface).add("Name", endpoint, include_resource_types=['AWS::EC2::VPCEndpoint'])
 
-        idp_table = ddb.Table.from_table_name(self, 'idpTable', table_name='transferidp_identity_providers')
-        user_table = ddb.Table.from_table_name(self, 'userTable', table_name='transferidp_users')
-
-        ddb_endpoint = self.vpc.add_gateway_endpoint("DynamoDbGatewayEndpoint", service=ec2.GatewayVpcEndpointAwsService.DYNAMODB)
-        ddb_endpoint.add_to_policy(iam.PolicyStatement(
-            actions=['dynamodb:DeleteItem', 'dynamodb:GetItem', 'dynamodb:UpdateItem', 'dynamodb:PutItem', 'dynamodb:Query', 'dynamodb:Scan'],
-            principals=[iam.AccountPrincipal(account_id=self.account)], # could be scoped to ECS task role and Lambda execution roles
-            resources=[idp_table.table_arn, user_table.table_arn] # if multi-region add regional ARNs
-        ))
-
-        # only needed if TF server in this VPC, apply policy as bucket ACL
-        s3_endpoint = self.vpc.add_gateway_endpoint("S3GatewayEndpoint", service=ec2.GatewayVpcEndpointAwsService.S3)
-        s3_endpoint.add_to_policy(iam.PolicyStatement(
-            actions=['*'], # scope to S3 crud operations for TF server
-            principals=[iam.AccountPrincipal(account_id=self.account)], # scope to TF server
-            resources=['*'] # scope to needed buckets
-        ))
 
 
         bastion_sg = ec2.SecurityGroup(self, "bastion_sg", security_group_name="BastionSg",

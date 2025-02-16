@@ -3,8 +3,6 @@ from aws_lambda_powertools.utilities.typing import LambdaContext
 from aws_lambda_powertools.utilities.data_classes import event_source, ALBEvent
 from aws_lambda_powertools import Tracer
 from aws_lambda_powertools import Metrics
-from aws_lambda_powertools.utilities.idempotency.serialization.dataclass import DataclassSerializer
-from dataclasses import dataclass, field
 import boto3
 import json
 import os

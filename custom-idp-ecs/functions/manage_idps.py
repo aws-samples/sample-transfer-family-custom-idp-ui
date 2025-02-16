@@ -3,8 +3,7 @@ from aws_lambda_powertools.utilities.typing import LambdaContext
 from aws_lambda_powertools.utilities.data_classes import event_source, ALBEvent
 from aws_lambda_powertools import Tracer
 from aws_lambda_powertools import Metrics
-from aws_lambda_powertools.utilities.idempotency.serialization.dataclass import DataclassSerializer
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 import boto3
 import json
 import os
@@ -16,7 +15,6 @@ tracer = Tracer()
 table_name = os.environ['IDP_TABLE_NAME']
 
 ddb_client = boto3.resource("dynamodb")
-
 
 @tracer.capture_lambda_handler
 @metrics.log_metrics
