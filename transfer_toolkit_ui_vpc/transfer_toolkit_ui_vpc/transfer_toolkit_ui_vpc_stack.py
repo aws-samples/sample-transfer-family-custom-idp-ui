@@ -11,7 +11,7 @@ from constructs import Construct
 # add EFS is using EFS with TF and in same VPC
 interface_endpoints = ['ecr.dkr', 'ecr.api', 'xray', 'logs', 'ssm', 'ssmmessages', 'ec2messages', 'secretsmanager', 'elasticloadbalancing','monitoring', 'lambda']
 
-class SampleVpcStack(Stack):
+class TransferToolkitUiVpcStack(Stack):
 
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
@@ -45,7 +45,7 @@ class SampleVpcStack(Stack):
                                        allow_all_outbound=True)
         bastion_sg.add_ingress_rule(vpc_peer, ec2.Port.tcp(80))
         bastion_sg.add_ingress_rule(vpc_peer, ec2.Port.tcp(443))
-        admin_client = ec2.BastionHostLinux(self, "AdminClient", instance_name="AdminClient", vpc=self.vpc,
+        admin_client = ec2.BastionHostLinux(self, "TransferToolKitAdminClient", instance_name="AdminClient", vpc=self.vpc,
                                             require_imdsv2=True,
                                             security_group=bastion_sg,
                                             subnet_selection=ec2.SubnetSelection(
