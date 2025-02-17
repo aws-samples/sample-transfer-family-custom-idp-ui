@@ -24,10 +24,10 @@ class CustomIdpEcsStack(Stack):
         super().__init__(scope, construct_id, **kwargs)
 
         # if you are not using the provided vpc, update this to use your vpc name or id.
-        vpc = ec2.Vpc.from_lookup(self, 'CustomIdpVpc', vpc_name='SampleVpcStack/CustomIdpVpc')
+        vpc = ec2.Vpc.from_lookup(self, 'ToolkitUiVpc', vpc_name='TransferToolkitUiVpcStack/ToolkitUiVpc')
 
-        cluster = ecs.Cluster(self, "CustomIdpCluster", vpc=vpc, enable_fargate_capacity_providers=True)
-        task_definition = ecs.FargateTaskDefinition(self, 'CustomIdpTaskDefinition',
+        cluster = ecs.Cluster(self, "TransferToolkitUiCluster", vpc=vpc, enable_fargate_capacity_providers=True)
+        task_definition = ecs.FargateTaskDefinition(self, 'TransferToolkitUiTaskDefinition',
                                                     runtime_platform=ecs.RuntimePlatform(
                                                         operating_system_family=ecs.OperatingSystemFamily.LINUX,
                                                         cpu_architecture=ecs.CpuArchitecture.ARM64
@@ -35,14 +35,14 @@ class CustomIdpEcsStack(Stack):
                                                     memory_limit_mib=1024, cpu=256
                                                     )
 
-        image = ecr_assets.DockerImageAsset(self, 'CustomIdpWebAppImage',
+        image = ecr_assets.DockerImageAsset(self, 'TransferToolkitUiWebAppImage',
                                             directory=os.path.join(os.path.dirname('../.'), 'custom-idp-ui'))
         image.repository.image_scan_on_push = True
 
-        container = task_definition.add_container('CustomIdpWebApp',
+        container = task_definition.add_container('TransferToolkitUiWebApp',
                                                   image=ecs.ContainerImage.from_docker_image_asset(asset=image),
                                                   logging=ecs.LogDrivers.aws_logs(
-                                                      stream_prefix='CustomIdpEcsLog',
+                                                      stream_prefix='TransferToolkitUiEcsLog',
                                                       mode=ecs.AwsLogDriverMode.NON_BLOCKING,
                                                       max_buffer_size=cdk.Size.mebibytes(25)
                                                   ))
@@ -69,7 +69,7 @@ class CustomIdpEcsStack(Stack):
 
         # Todo: enable application signals -> https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-Application-Signals-Enable-Lambda.html
 
-        idp_function = lambda_.Function(self, 'CustomIdpLambda',
+        idp_function = lambda_.Function(self, 'TransferToolkitUiLambda',
                                         runtime=runtime,
                                         handler='manage_idps.handler',
                                         code=lambda_.Code.from_asset(
@@ -85,7 +85,7 @@ class CustomIdpEcsStack(Stack):
                                         log_retention=cdk.aws_logs.RetentionDays.FIVE_DAYS,
                                         timeout=cdk.Duration.seconds(3))
 
-        user_function = lambda_.Function(self, 'CustomIdpUsersLambda',
+        user_function = lambda_.Function(self, 'TransferToolkitUiUsersLambda',
                                          runtime=runtime,
                                          handler='manage_users.handler',
                                          code=lambda_.Code.from_asset(
@@ -138,14 +138,14 @@ class CustomIdpEcsStack(Stack):
         ))
 
         toolkit_domain = 'toolkit.transferfamily.aws.com'
-        alb = elbv2.ApplicationLoadBalancer(self, 'CustomIdpLoadBalancer',
+        alb = elbv2.ApplicationLoadBalancer(self, 'TransferToolkitUiLoadBalancer',
                                             vpc=vpc,
                                             internet_facing=False,
                                             #cross_zone_enabled=False,
                                             # read up on this
                                             )
 
-        zone = route53.PrivateHostedZone(self, 'CustomIdpHostedZone',
+        zone = route53.PrivateHostedZone(self, 'TransferToolkitUiHostedZone',
                                          zone_name=toolkit_domain,
                                          vpc=vpc)
         route53.ARecord(self, "ToolkitUiDomain",
@@ -157,7 +157,7 @@ class CustomIdpEcsStack(Stack):
         # todo: to enable HTTPS, you will need a private certificate authority
         # https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_acmpca/CfnCertificateAuthority.html
 
-        # certificate = acm.PrivateCertificate(self, 'CustomIdpCertificate',
+        # certificate = acm.PrivateCertificate(self, 'TransferToolkitUiCertificate',
         #                                      domain_name=toolkit_domain,
         #                                      certificate_authority=)
 
@@ -179,7 +179,7 @@ class CustomIdpEcsStack(Stack):
                              conditions=[elbv2.ListenerCondition.path_patterns(["/api/user/*"])],
                              targets=[elbv2_targets.LambdaTarget(user_function)])
 
-        # todo --> add cognito with verified permissions to web app, admin and user management groups.
+        # todo --> add cognito stack with verified permissions to web app, admin and user management groups.
         # https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_verifiedpermissions/README.html
         # https://constructs.dev/packages/@cdklabs/cdk-verified-permissions/v/0.1.5?lang=typescript
 

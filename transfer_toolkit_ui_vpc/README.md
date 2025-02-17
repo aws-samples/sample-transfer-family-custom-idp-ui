@@ -1,28 +1,15 @@
 
-# Welcome to your CDK Python project!
+# Isolated VPC for the Transfer Family Toolkit Admin UI
 
-During development, you are using your coap account.
+This project contains a private isolated VPC that you can target to run your Toolkit Admin UI in.
+The VP contains a bastion host EC2 instance
+used for connecting to the UI with the AWS Systems Manager Session Manager port forwarding.
+Depending on your organization,
+you may remove this resource and instead route to your VPC from AWS Transit Gateway or other network configuraions. 
 
-You will create a private VPC,
-and use session manager tunneling to access the ECS ALB endpoint from the bastion host created by this stack.
-You'll load that in a local browser somehow.
+## Install the VPC 
 
-create an env.sh file with account, region, vpc name or id
-
-eventually you will have to test out multi-region as well,
-but you really only care about the data plane of transfer family and the idp itself,
-not really about the admin tool being MR. 
-
-The `cdk.json` file tells the CDK Toolkit how to execute your app.
-
-This project is set up like a standard Python project.  The initialization
-process also creates a virtualenv within this project, stored under the `.venv`
-directory.  To create the virtualenv it assumes that there is a `python3`
-(or `python` for Windows) executable in your path with access to the `venv`
-package. If for any reason the automatic creation of the virtualenv fails,
-you can create the virtualenv manually.
-
-To manually create a virtualenv on MacOS and Linux:
+First manually create a virtualenv on MacOS and Linux:
 
 ```
 $ python3 -m venv .venv
@@ -53,16 +40,10 @@ At this point you can now synthesize the CloudFormation template for this code.
 $ cdk synth
 ```
 
-To add additional dependencies, for example other CDK libraries, just add
-them to your `setup.py` file and rerun the `pip install -r requirements.txt`
-command.
+Finally, deploy your VPC infrastructure
 
-## Useful commands
+```
+$ cdk deploy
+```
 
- * `cdk ls`          list all stacks in the app
- * `cdk synth`       emits the synthesized CloudFormation template
- * `cdk deploy`      deploy this stack to your default AWS account/region
- * `cdk diff`        compare deployed stack with current state
- * `cdk docs`        open CDK documentation
-
-Enjoy!
+Now continue on to install the custom IdP ECS project

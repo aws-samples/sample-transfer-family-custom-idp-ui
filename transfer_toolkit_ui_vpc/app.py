@@ -3,11 +3,11 @@ import os
 
 import aws_cdk as cdk
 
-from sample_vpc.transfer_toolkit_ui_vpc_stack import TransferToolkitUiVpcStack
+from transfer_toolkit_ui_vpc.transfer_toolkit_ui_vpc_stack import TransferToolkitUiVpcStack
 
 
 app = cdk.App()
-TransferToolkitUiVpcStack(app, "SampleVpcStack",
+TransferToolkitUiVpcStack(app, "TransferToolkitUiVpcStack",
                           # If you don't specify 'env', this stack will be environment-agnostic.
                           # Account/Region-dependent features and context lookups will not work,
                           # but a single synthesized template can be deployed anywhere.

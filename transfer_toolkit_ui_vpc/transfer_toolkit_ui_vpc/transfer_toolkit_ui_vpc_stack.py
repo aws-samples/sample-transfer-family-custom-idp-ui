@@ -17,13 +17,13 @@ class TransferToolkitUiVpcStack(Stack):
         super().__init__(scope, construct_id, **kwargs)
 
         subnet_type = ec2.SubnetType.PRIVATE_ISOLATED
-        self.vpc: ec2.IVpc = ec2.Vpc(self, "CustomIdpVpc", max_azs=3, subnet_configuration=[
-            ec2.SubnetConfiguration(subnet_type=subnet_type, name="CustomIdp", cidr_mask=24),
+        self.vpc: ec2.IVpc = ec2.Vpc(self, "ToolkitUiVpc", max_azs=3, subnet_configuration=[
+            ec2.SubnetConfiguration(subnet_type=subnet_type, name="ToolkitUi", cidr_mask=24),
         ])
-        self.vpc.add_flow_log("CustomIdpVpcFlowLog")
+        self.vpc.add_flow_log("ToolkitUiIdpVpcFlowLog")
         vpc_peer = ec2.Peer.ipv4(self.vpc.vpc_cidr_block)
-        endpoint_sg = ec2.SecurityGroup(self, "endpoint_sg", security_group_name="InterfaceEndpointSg",
-                                        description="allow access VPC Endpoints", vpc=self.vpc,
+        endpoint_sg = ec2.SecurityGroup(self, "endpoint_sg", security_group_name="ToolkitUiEndpointSg",
+                                        description="ToolkitUi access to VPC Endpoints", vpc=self.vpc,
                                         allow_all_outbound=True)
         Tags.of(endpoint_sg).add("Name", "InterfaceEndpoints")
         endpoint_sg.add_ingress_rule(vpc_peer, ec2.Port.tcp(443))
@@ -40,12 +40,12 @@ class TransferToolkitUiVpcStack(Stack):
 
 
 
-        bastion_sg = ec2.SecurityGroup(self, "bastion_sg", security_group_name="BastionSg",
+        bastion_sg = ec2.SecurityGroup(self, "bastion_sg", security_group_name="TransferToolKitAdminClientSg",
                                        description="allow access to bastion host", vpc=self.vpc,
                                        allow_all_outbound=True)
         bastion_sg.add_ingress_rule(vpc_peer, ec2.Port.tcp(80))
         bastion_sg.add_ingress_rule(vpc_peer, ec2.Port.tcp(443))
-        admin_client = ec2.BastionHostLinux(self, "TransferToolKitAdminClient", instance_name="AdminClient", vpc=self.vpc,
+        admin_client = ec2.BastionHostLinux(self, "TransferToolKitAdminClient", instance_name="TransferToolKitAdminClient", vpc=self.vpc,
                                             require_imdsv2=True,
                                             security_group=bastion_sg,
                                             subnet_selection=ec2.SubnetSelection(

@@ -28,5 +28,31 @@
   "acknowledged-issue-numbers": [
     31106,
     31106
-  ]
+  ],
+  "vpc-provider:account=401350835130:filter.tag:Name=TransferToolkitUiVpcStack/ToolkitUiVpc:region=us-east-1:returnAsymmetricSubnets=true": {
+    "vpcId": "vpc-05371f7cceacc8fbd",
+    "vpcCidrBlock": "10.0.0.0/16",
+    "ownerAccountId": "401350835130",
+    "availabilityZones": [],
+    "subnetGroups": [
+      {
+        "name": "ToolkitUi",
+        "type": "Isolated",
+        "subnets": [
+          {
+            "subnetId": "subnet-09240dbfad39382cc",
+            "cidr": "10.0.0.0/24",
+            "availabilityZone": "us-east-1a",
+            "routeTableId": "rtb-01f5ce388f1a82607"
+          },
+          {
+            "subnetId": "subnet-0254c83cfe5f7e36c",
+            "cidr": "10.0.1.0/24",
+            "availabilityZone": "us-east-1b",
+            "routeTableId": "rtb-0c730c4f299b76d46"
+          }
+        ]
+      }
+    ]
+  }
 }
