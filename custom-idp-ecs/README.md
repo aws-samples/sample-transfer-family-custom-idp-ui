@@ -13,6 +13,18 @@ To workaround this disable contianerd.
 
 ## Install the Toolkit IdP Admin Application 
 
+```
+cp env.template.sh env.sh
+chmod u+x env.sh
+```
+
+modify env.sh with your table names, preferred domain
+env.sh is git ignored, so your changes won't clash, don't change the template file.
+Now load your environment variables.
+
+```
+source ./env.sh
+```
 
 First manually create a virtualenv on MacOS and Linux:
 
