@@ -20,7 +20,11 @@ import os
 
 class CustomIdpEcsStack(Stack):
 
-    def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
+    def __init__(self, scope: Construct, construct_id: str,
+                 users_table: str = 'transferidp_users',
+                 idp_table: str = 'transferidp_identity_providers',
+                 alb_domain: str = 'toolkit.transferfamily.aws.com'
+                 , **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
         # if you are not using the provided vpc, update this to use your vpc name or id.
@@ -79,7 +83,7 @@ class CustomIdpEcsStack(Stack):
                                             'POWERTOOLS_METRICS_NAMESPACE': 'TransferFamilyToolkit',
                                             'POWERTOOLS_SERVICE_NAME': "ToolkitIdpAdmin",
                                             "LOG_LEVEL": "DEBUG",
-                                            'IDP_TABLE_NAME': 'transferidp_identity_providers'  # todo paramaterize
+                                            'IDP_TABLE_NAME': idp_table  # todo paramaterize
                                         },
                                         tracing=lambda_.Tracing.ACTIVE,
                                         log_retention=cdk.aws_logs.RetentionDays.FIVE_DAYS,
@@ -95,7 +99,7 @@ class CustomIdpEcsStack(Stack):
                                              'POWERTOOLS_METRICS_NAMESPACE': 'TransferFamilyToolkit',
                                              'POWERTOOLS_SERVICE_NAME': "ToolkitIdpAdmin",
                                              "LOG_LEVEL": "DEBUG",
-                                             'USER_TABLE_NAME': 'transferidp_users'  # todo paramaterize
+                                             'USER_TABLE_NAME': users_table  # todo paramaterize
                                          },
                                          tracing=lambda_.Tracing.ACTIVE,
                                          log_retention=cdk.aws_logs.RetentionDays.FIVE_DAYS,
@@ -106,9 +110,9 @@ class CustomIdpEcsStack(Stack):
         idp_function.add_layers(powertools_layer)
         user_function.add_layers(powertools_layer)
 
-        idp_table = ddb.Table.from_table_name(self, 'idpTable', table_name='transferidp_identity_providers')
+        idp_table = ddb.Table.from_table_name(self, 'idpTable', table_name=idp_table)
         idp_table.grant_read_write_data(idp_function)
-        user_table = ddb.Table.from_table_name(self, 'userTable', table_name='transferidp_users')
+        user_table = ddb.Table.from_table_name(self, 'userTable', table_name=users_table)
         user_table.grant_read_write_data(user_function)
 
         ddb_endpoint = vpc.add_gateway_endpoint("DynamoDbGatewayEndpoint",
@@ -137,7 +141,6 @@ class CustomIdpEcsStack(Stack):
             resources=['*']  # scope to needed buckets
         ))
 
-        toolkit_domain = 'toolkit.transferfamily.aws.com'
         alb = elbv2.ApplicationLoadBalancer(self, 'TransferToolkitUiLoadBalancer',
                                             vpc=vpc,
                                             internet_facing=False,
@@ -146,7 +149,7 @@ class CustomIdpEcsStack(Stack):
                                             )
 
         zone = route53.PrivateHostedZone(self, 'TransferToolkitUiHostedZone',
-                                         zone_name=toolkit_domain,
+                                         zone_name=alb_domain,
                                          vpc=vpc)
         route53.ARecord(self, "ToolkitUiDomain",
                         zone=zone,
