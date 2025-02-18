@@ -4,7 +4,7 @@ from aws_lambda_powertools.utilities.data_classes import event_source, ALBEvent
 from aws_lambda_powertools import Tracer
 from aws_lambda_powertools import Metrics
 import boto3
-import json
+import simplejson as json
 import os
 
 logger = Logger()

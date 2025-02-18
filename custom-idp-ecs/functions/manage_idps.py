@@ -5,7 +5,7 @@ from aws_lambda_powertools import Tracer
 from aws_lambda_powertools import Metrics
 from dataclasses import dataclass
 import boto3
-import json
+import simplejson as json
 import os
 
 logger = Logger()

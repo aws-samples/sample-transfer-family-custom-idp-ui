@@ -4,7 +4,15 @@
 This project creates an ECS service for hosting the Vue 3 web application,
 Lambda functions for CRUDL operations to the 'transferidp_identity_providers' and 
 
+## Requirements
+
+You will need Docker Desktop (or a similar alternative), Python3 and the AWS CDK installed to deploy this project. 
+
+If you have containerd-snapshotter installed, it will not be compatible with ECR, and deployments will fail.
+To workaround this disable contianerd. 
+
 ## Install the Toolkit IdP Admin Application 
+
 
 First manually create a virtualenv on MacOS and Linux:
 
