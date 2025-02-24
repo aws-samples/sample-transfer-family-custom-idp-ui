@@ -27,7 +27,8 @@
   },
   "acknowledged-issue-numbers": [
     31106,
-    31106
+    31106,
+    32775
   ],
   "vpc-provider:account=401350835130:filter.tag:Name=TransferToolkitUiVpcStack/ToolkitUiVpc:region=us-east-1:returnAsymmetricSubnets=true": {
     "vpcId": "vpc-05371f7cceacc8fbd",
