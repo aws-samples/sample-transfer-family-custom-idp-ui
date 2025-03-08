@@ -1,7 +1,10 @@
 from constructs import Construct
 from aws_cdk import (
     Stack,
-    aws_cognito as cognito
+    aws_cognito as cognito,
+    aws_ec2 as ec2,
+    aws_iam as iam,
+    aws_apigateway as apigw
 )
 import aws_cdk as cdk
 import os
@@ -42,8 +45,12 @@ class CustomIdpAuthStack(Stack):
                                      mfa_second_factor=cognito.MfaSecondFactor(
                                          otp=True,
                                          sms=False
-                                     ),
-                                     )
+                                     ))
+
+        domain = user_pool.add_domain('TransferToolkitUiUserPoolDomain',
+                                      cognito_domain=cognito.CognitoDomainOptions(
+                                          domain_prefix=os.environ.get('COGNITO_DOMAIN_PREFIX', 'transfer-toolkit-ui')
+                                      ))
 
         user_pool_client = cognito.UserPoolClient(self, 'TransferToolkitUiUserPoolClient',
                                                   user_pool=user_pool,
@@ -67,12 +74,76 @@ class CustomIdpAuthStack(Stack):
                                                       scopes=[cognito.OAuthScope.OPENID],
                                                       logout_urls=[f"https://{alb_domain}"]
                                                   ),
-                                                  supported_identity_providers=[cognito.UserPoolClientIdentityProvider.COGNITO],
+                                                  supported_identity_providers=[
+                                                      cognito.UserPoolClientIdentityProvider.COGNITO],
                                                   )
+
+        vpc = ec2.Vpc.from_lookup(self, 'ToolkitUiVpc', vpc_name='TransferToolkitUiVpcStack/ToolkitUiVpc')
+
+        vpc_endpoint = vpc.add_interface_endpoint("ApiGatewayVpcEndpoint",
+                                                  service=ec2.InterfaceVpcEndpointService(
+                                                      "com.amazonaws.{}.execute-api".format(self.region)),
+                                                  private_dns_enabled=True,
+                                                  subnets=ec2.SubnetSelection(
+                                                      subnets=vpc.isolated_subnets
+                                                  )
+                                                  )
+
+        endpoint_policy = iam.PolicyDocument(
+            statements=[
+                iam.PolicyStatement(
+                    principals=[iam.AnyPrincipal()],
+                    actions=["execute-api:Invoke"],
+                    resources=["execute-api:/*"],
+                    effect=iam.Effect.ALLOW
+                )]
+        )
+
+        api = apigw.RestApi(self, "UserPoolEgressProxyAPI",
+                            endpoint_types=[apigw.EndpointType.PRIVATE],
+                            policy=endpoint_policy,
+                            deploy_options=apigw.StageOptions(
+                                logging_level=apigw.MethodLoggingLevel.INFO,
+                                data_trace_enabled=True,
+                                tracing_enabled=True
+                            ))
+
+        hello = api.root.add_resource("hello")
+        hello.add_method("GET",
+                         apigw.MockIntegration(
+                             integration_responses=[{
+                                 'statusCode': '200',
+                                 'responseTemplates': {
+                                     'application/json': '{"message": "Hello from private API"}'
+                                 }
+                             }],
+                             request_templates={
+                                 'application/json': '{"statusCode": 200}'
+                             }
+                         ),
+                         method_responses=[{
+                             'statusCode': '200',
+                             'responseModels': {
+                                 'application/json': apigw.Model.EMPTY_MODEL
+                             }
+                         }]
+                         )
+
+        # api.
+
+        # api.root.add_to_resource_policy(
+        #     iam.PolicyStatement(
+        #         principals=[iam.AnyPrincipal()],
+        #         actions=["execute-api:Invoke"],
+        #         resources=[f"arn:aws:execute-api:{self.region}:{self.account}:{api.rest_api_id}/*"],
+        #         effect=iam.Effect.DENY,
+        #         conditions={
+        #             "StringNotEquals": {
+        #                 "aws:SourceVpce": vpc_endpoint.vpc_endpoint_id
+        #             }
+        #         }
+        #     )
+        # )
 
         cdk.CfnOutput(self, 'UserPoolId', value=user_pool.user_pool_id)
         cdk.CfnOutput(self, 'UserPoolClientId', value=user_pool_client.user_pool_client_id)
-
-
-
-

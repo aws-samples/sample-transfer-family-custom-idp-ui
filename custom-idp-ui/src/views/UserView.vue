@@ -2,7 +2,7 @@
   <div>
     <div class="user_list">
       <h2>Existing Users</h2>
-      <table>
+      <table class="table table-sm table-striped table-hover">
         <thead>
           <tr>
             <th>Username</th>
@@ -17,8 +17,8 @@
             <td>{{ user.identity_provider_key }}</td>
             <td>{{ user.config.Role }}</td>
             <td>
-              <button v-on:click="editUser(user.user, user.identity_provider_key)">Edit or Copy</button>
-              <button v-on:click="deleteUser(user.user, user.identity_provider_key)">Delete</button>
+              <button v-on:click="editUser(user.user, user.identity_provider_key)" class="btn btn-secondary">Edit or Copy</button>
+              <button v-on:click="deleteUser(user.user, user.identity_provider_key)" class="btn btn-danger">Delete</button>
             </td>
           </tr>
         </tbody>
@@ -110,8 +110,8 @@
         </input-item>
 
         <h4>Home Directory Details</h4>
+        <button type="button" @click="homePush('')" class="btn btn-secondary">Add Home Directory Detail</button>
         <div v-for="(field, index) in homeFields" :key="field.key">
-          <button type="button" @click="homeRemove(index)">Remove Detail</button>
           <input-item>
             <template #label><label :for="'entry' + index">Entry</label></template>
             <input
@@ -135,11 +135,13 @@
             placeholder="One region code per line"
             v-model="homeFields[index].value['regions']"
           ></textarea>
+            <button type="button" @click="homeRemove(index)" class="btn btn-warning">Remove Detail</button>
         </input-item>
         </div>
-        <button type="button" @click="homePush('')">Add Home Directory Detail</button>
+
 
         <h4>Posix Profiles</h4>
+        <button type="button" @click="posixPush('')" class="btn btn-secondary">Add Posix Profile</button>
         <div v-for="(field, index) in posixFields" :key="field.key">
            <input-item>
             <template #label><label :for="'gid' + index">Gid</label></template>
@@ -156,23 +158,25 @@
               :id="'uid' + index"
               v-model.lazy="posixFields[index].value['Uid']"
             />
+            <button type="button" @click="posixRemove(index)"  class="btn btn-warning">Remove Profile</button>
           </input-item>
-          <button type="button" @click="posixRemove(index)">Remove Profile</button>
+
         </div>
-        <button type="button" @click="posixPush('')">Add Posix Profile</button>
+
 
 
         <h4>Public Keys</h4>
+        <button type="button" @click="keyPush('')" class="btn btn-secondary">Add Key</button>
         <div v-for="(field, index) in keyFields" :key="field.key">
           <input-item>
             <textarea name="public_keys{{index}}" v-model.lazy="keyFields[index].value"></textarea>
-            <button type="button" @click="keyRemove(index)">Remove Key</button>
+            <button type="button" @click="keyRemove(index)"  class="btn btn-warning">Remove Key</button>
           </input-item>
         </div>
-        <button type="button" @click="keyPush('')">Add Key</button>
+
         <div id="submit">
-          <input id="form_submit" type="submit" value="Save" />
-          <input id="cancel" type="reset" onclick="window.location.reload()" value="Clear" />
+          <input id="form_submit" type="submit" value="Save"  class="btn btn-primary"/>
+          <input id="cancel" type="reset" onclick="window.location.reload()" value="Clear"  class="btn btn-warning"/>
         </div>
       </form>
       <div v-else>
@@ -187,6 +191,8 @@
   .user_list {
     margin-bottom: 1.5em;
     margin-top: 1em;
+    height: 250px;
+    overflow-y: scroll;
   }
 
   .user {
@@ -198,6 +204,16 @@
   }
   input[type="text"] {
     width: 25em;
+  }
+  thead th {
+    position: sticky;
+    top: 0;
+  }
+  .btn {
+    margin-right: .75rem;
+  }
+  h4 {
+    margin-top: .3rem;
   }
 }
 </style>

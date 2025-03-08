@@ -2,21 +2,23 @@
   <div>
     <div class="idp_list">
       <h2>Identity Providers</h2>
-      <table>
+      <table class="table table-sm table-striped table-hover"  data-bs-spy="scroll">
         <thead>
         <tr>
-          <th>Provider</th>
-          <th>Module</th>
-          <th>Actions</th>
+          <th scope="col">#</th>
+          <th scope="col">Provider</th>
+          <th scope="col">Module</th>
+          <th scope="col">Actions</th>
         </tr>
         </thead>
         <tbody>
-        <tr v-for="idp in idp_list" :key="idp['provider']">
+        <tr v-for="(idp,index) in idp_list" :key="idp['provider']">
+          <th scope="row">{{ index }}</th>
           <td>{{ idp.provider }}</td>
           <td>{{ idp.module }}</td>
           <td>
-            <button v-on:click="editIdp(idp.provider)">Edit or Copy</button>
-            <button v-on:click="deleteIdp(idp.provider)">Delete</button>
+            <button v-on:click="editIdp(idp.provider)" class="btn btn-secondary">Edit or Copy</button>
+            <button v-on:click="deleteIdp(idp.provider)" class="btn btn-danger">Delete</button>
           </td>
         </tr>
         </tbody>
@@ -261,8 +263,8 @@
           <input placeholder="fully qualified domain name" id="" type="text" v-bind="okta_redirect_url_attrs" v-model="okta_redirect_url" />
         </InputItem>
         <div id="submit">
-          <input id="form_submit" type="submit" value="Save"/>
-          <input id="cancel" type="reset" onclick="window.location.reload()" value="Clear"/>
+          <input id="form_submit" type="submit" value="Save" class="btn btn-primary"/>
+          <input id="cancel" type="reset" onclick="window.location.reload()" value="Clear" class="btn btn-warning"/>
         </div>
       </form>
     </div>
@@ -274,6 +276,8 @@
   .idp_list {
     margin-bottom: 1.5em;
     margin-top: 1em;
+    height: 250px;
+    overflow-y: scroll;
   }
 
   .idp {
@@ -285,6 +289,13 @@
   }
   textarea {
     width: 40em;
+  }
+  thead th {
+    position: sticky;
+    top: 0;
+  }
+  .btn {
+    margin-right: .75rem;
   }
 }
 </style>

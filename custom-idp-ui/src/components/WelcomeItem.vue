@@ -1,5 +1,5 @@
 <template>
-  <div class="item">
+  <div class="col-7 item">
     <i>
       <slot name="icon"></slot>
     </i>
@@ -14,6 +14,7 @@
 
 <style scoped>
 .item {
+  margin-left: 3rem;
   margin-top: 2rem;
   display: flex;
   position: relative;
@@ -27,7 +28,7 @@
 i {
   display: flex;
   place-items: center;
-  place-content: center;
+  place-content: flex-start;
   width: 32px;
   height: 32px;
   color: var(--color-text);
