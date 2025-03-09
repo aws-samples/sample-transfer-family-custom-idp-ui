@@ -1,9 +1,9 @@
 <template>
   <div class="row" style="padding-top: .2rem">
-    <div class="col-5 field">
+    <div class="col-3 field">
       <slot name="label"></slot>
     </div>
-    <div class="col-7 input">
+    <div class="col-9 input">
       <i class="message">
         <span class="error"><slot name="message"></slot></span>
       </i>

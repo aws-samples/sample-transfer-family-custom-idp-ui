@@ -14,9 +14,10 @@
   },
   "dependencies": {
     "pinia": "^2.1.7",
+    "vee-validate": "^4.12.6",
     "vue": "^3.4.29",
     "vue-router": "^4.3.3",
-    "vee-validate": "^4.12.6",
+    "vuejs-smart-table": "^1.0.0-beta.6",
     "yup": "^1.4.0"
   },
   "devDependencies": {

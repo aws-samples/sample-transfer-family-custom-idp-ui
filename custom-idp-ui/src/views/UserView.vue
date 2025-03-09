@@ -1,31 +1,37 @@
 <template>
-  <div>
+  <div class="row" id="users">
+    <div class="col-8"><h2>Existing Users</h2></div>
+    <div class="col-1" style="text-align: right"><label>Filter:</label></div>
+    <div class="col-2" style="text-align: right"><input v-model="filters.name.value" class="filter"/></div>
+  </div>
+  <div class="row">
     <div class="user_list">
-      <h2>Existing Users</h2>
-      <table class="table table-sm table-striped table-hover">
-        <thead>
-          <tr>
-            <th>Username</th>
-            <th>IdP Key</th>
-            <th>Module Type</th>
-            <th>Role</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="user in user_list" :key="user['user']">
-            <td>{{ user.user }}</td>
-            <td>{{ user.identity_provider_key }}</td>
-            <td>{{ user.config.Role }}</td>
+
+      <VTable :data="user_list" :filters="filters" class="table table-sm table-striped table-hover">
+        <template #head>
+            <VTh sortKey="user">Username</VTh>
+            <VTh sortKey="identity_provider_key">IdP Key</VTh>
+            <VTh sortKey="identity_provider_module">Module Type</VTh>
+            <VTh sortKey="config.Role">Role</VTh>
+            <th>Actions</th>
+        </template>
+        <template #body="{rows}">
+          <tr v-for="row in rows" :key="row.user">
+            <td>{{ row.user }}</td>
+            <td>{{ row.identity_provider_key }}</td>
+            <td>{{ row.identity_provider_module }}</td>
+            <td>{{ row.config.Role }}</td>
             <td>
-              <button v-on:click="editUser(user.user, user.identity_provider_key)" class="btn btn-secondary">Edit or Copy</button>
-              <button v-on:click="deleteUser(user.user, user.identity_provider_key)" class="btn btn-danger">Delete</button>
+              <button v-on:click="editUser(row.user, row.identity_provider_key)" class="btn btn-secondary">Edit or Copy</button>
+              <button v-on:click="deleteUser(row.user, row.identity_provider_key)" class="btn btn-danger">Delete</button>
             </td>
           </tr>
-        </tbody>
-      </table>
+        </template>
+      </VTable>
     </div>
-    <h2>{{ operation }}</h2>
-    <div class="user">
+  </div>
+    <div class="row user">
+      <h2>{{ operation }}</h2>
       <form
         id="user-form"
         class="form-inline"
@@ -174,7 +180,7 @@
           </input-item>
         </div>
 
-        <div id="submit">
+        <div id="complete">
           <input id="form_submit" type="submit" value="Save"  class="btn btn-primary"/>
           <input id="cancel" type="reset" onclick="window.location.reload()" value="Clear"  class="btn btn-warning"/>
         </div>
@@ -183,7 +189,7 @@
         <p>There are no IDPs configured. Please create an IDP then add users.</p>
       </div>
     </div>
-  </div>
+
 </template>
 
 <style>
@@ -194,25 +200,44 @@
     height: 250px;
     overflow-y: scroll;
   }
-
+  .filter {
+    width: 200px;
+    text-align: right;
+  }
   .user {
     min-height: 100vh;
     display: flex;
+  }
+  #users {
+    margin-top: 1rem;
   }
   label {
     vertical-align: top;
   }
   input[type="text"] {
     width: 25em;
+    display: block;
   }
   thead th {
     position: sticky;
     top: 0;
+    background-color: var(--bs-table-bg)
   }
   .btn {
     margin-right: .75rem;
   }
+  #complete {
+    margin-top: 1rem;
+    text-align: center;
+  }
   h4 {
+    margin-top: .3rem;
+  }
+  textarea {
+    display: block;
+  }
+  button {
+    display: block;
     margin-top: .3rem;
   }
 }
@@ -230,6 +255,10 @@ const load_user_list = async () => {
   user_list.value = await getUser('', '')
 }
 load_user_list()
+
+const filters = ref({
+   name: { value: '', keys: ['user', 'identity_provider_key', 'identity_provider_module', 'config.Role'] }
+})
 
 const operation = ref('Create New User')
 
