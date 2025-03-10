@@ -2,27 +2,39 @@
   <div class="row" id="users">
     <div class="col-8"><h2>Existing Users</h2></div>
     <div class="col-1" style="text-align: right"><label>Filter:</label></div>
-    <div class="col-2" style="text-align: right"><input v-model="filters.name.value" class="filter"/></div>
+    <div class="col-2" style="text-align: right">
+      <input v-model="filters.name.value" class="filter" />
+    </div>
   </div>
   <div class="row">
     <div class="user_list" v-if="user_list.length > 0">
       <VTable :data="user_list" :filters="filters" class="table table-sm table-striped table-hover">
         <template #head>
-            <VTh sortKey="user">Username</VTh>
-            <VTh sortKey="identity_provider_key">IdP Key</VTh>
-            <VTh sortKey="identity_provider_module">Module Type</VTh>
-            <VTh sortKey="config.Role">Role</VTh>
-            <th>Actions</th>
+          <VTh sortKey="user">Username</VTh>
+          <VTh sortKey="identity_provider_key">IdP Key</VTh>
+          <VTh sortKey="identity_provider_module">Module Type</VTh>
+          <VTh sortKey="config.Role">Role</VTh>
+          <th>Actions</th>
         </template>
-        <template #body="{rows}">
+        <template #body="{ rows }">
           <tr v-for="row in rows" :key="row.user">
             <td>{{ row.user }}</td>
             <td>{{ row.identity_provider_key }}</td>
             <td>{{ row.identity_provider_module }}</td>
             <td>{{ row.config.Role }}</td>
             <td>
-              <button v-on:click="editUser(row.user, row.identity_provider_key)" class="btn btn-secondary">Edit or Copy</button>
-              <button v-on:click="deleteUser(row.user, row.identity_provider_key)" class="btn btn-danger">Delete</button>
+              <button
+                v-on:click="editUser(row.user, row.identity_provider_key)"
+                class="btn btn-secondary"
+              >
+                Edit or Copy
+              </button>
+              <button
+                v-on:click="deleteUser(row.user, row.identity_provider_key)"
+                class="btn btn-danger"
+              >
+                Delete
+              </button>
             </td>
           </tr>
         </template>
@@ -30,166 +42,189 @@
     </div>
     <div v-else>{{ user_load_msg }}</div>
   </div>
-    <div class="row user" v-if="idp_list.length > 0">
-      <h2>{{ operation }}</h2>
-<!--      <p>ToDo: display success messages for deletes and saves</p>-->
-      <form
-        id="user-form"
-        class="form-inline"
-        v-on:submit.prevent="createUser()"
-      >
-        <InputItem>
-          <template #message>{{ errors.user }}</template>
-          <template #label><label for="user">Username</label></template>
-          <input placeholder="in lowercase" type="text" id="user" v-model="user" v-bind="user_attrs" />
-        </InputItem>
-        <InputItem>
-          <template #message>{{ errors.identity_provider_key }}
+  <div class="row user" v-if="idp_list.length > 0">
+    <h2>{{ operation }}</h2>
+    <!--      <p>ToDo: display success messages for deletes and saves</p>-->
+    <form id="user-form" class="form-inline" v-on:submit.prevent="createUser()">
+      <InputItem>
+        <template #message>{{ errors.user }}</template>
+        <template #label><label for="user">Username</label></template>
+        <input
+          placeholder="in lowercase"
+          type="text"
+          id="user"
+          v-model="user"
+          v-bind="user_attrs"
+        />
+      </InputItem>
+      <InputItem>
+        <template #message
+          >{{ errors.identity_provider_key }}
           <span v-if="errors.identity_provider_module">
             <br />{{ errors.identity_provider_module }}
           </span>
-          </template>
-          <template #label
-            ><label for="identity_provider_key">Identity Provider Key</label></template
-          >
-          <select
-            id="identity_provider_key"
-            name="identity_provider_key"
-            v-model="identity_provider_key"
-            v-bind="identity_provider_key_attrs"
-            v-on:change="setIdpModule">
-            <option disabled value="">Choose IDP</option>
-            <option v-for="option in idp_list" :value="option.provider" :key="option.provider">
-              {{ option.module }}: {{ option.provider }}
-            </option>
-          </select>
-        </InputItem>
-        <InputItem>
-          <template #message>{{ errors.config_Role }}</template>
-          <template #label><label for="role">IAM Role ARN</label></template>
-          <input placeholder="arn:aws:iam::<account-id>:role/<role-name>" type="text" id="role" v-model="Role" v-bind="Role_attrs" />
-        </InputItem>
-        <InputItem v-if="argon2_hash_attrs.visible">
-          <template #message>{{ errors.config_argon2_hash }}</template>
-          <template #label><label for="argon2_hash">Argon2 Hash</label></template>
-          <input placeholder="$argon2i$v=19$m=4096,t=3,p=$argon2i$v=19$m=4096,t=3,p=XX" type="text" id="argon2_hash" v-model="argon2_hash" v-bind="argon2_hash_attrs" />
-        </InputItem>
-        <h4>Home Directory Type</h4>
-        <InputItem>
-          <template #message></template>
-          <template #label><label for="LOGICAL">LOGICAL</label></template>
-          <input
-            type="radio"
-            id="LOGICAL"
-            name="home_directory_type"
-            value="LOGICAL"
-            v-model="HomeDirectoryType"
-            v-bind="HomeDirectoryType_attrs"
-          />
-        </InputItem>
-        <InputItem>
-          <template #message></template>
-          <template #label><label for="PATH">PATH</label></template>
-          <input
-            type="radio"
-            id="PATH"
-            name="home_directory_type"
-            value="PATH"
-            v-model="HomeDirectoryType"
-            v-bind="HomeDirectoryType_attrs"
-          />
-        </InputItem>
-        <InputItem v-if="HomeDirectory_attrs.visible">
-          <template #message>{{ errors.config_HomeDirectory }}</template>
-          <template #label><label for="home_directory">Home Directory</label></template>
-          <input placeholder="S3 or EFS path" type="text" name="role" v-model="HomeDirectory" v-bind="HomeDirectory_attrs" />
-        </InputItem>
-        <input-item>
-          <template #message>{{ errors.ipv4_allow_list }}</template>
-          <template #label><label for="ipv4_allow_list">IPv4 Allow List</label></template>
-          <textarea
-            id="ipv4_allow_list"
-            placeholder="CIDR address per line"
-            v-model="ipv4_allow_list"
-            v-bind="ipv4_allow_list_attrs"
-          ></textarea>
-        </input-item>
+        </template>
+        <template #label><label for="identity_provider_key">Identity Provider Key</label></template>
+        <select
+          id="identity_provider_key"
+          name="identity_provider_key"
+          v-model="identity_provider_key"
+          v-bind="identity_provider_key_attrs"
+          v-on:change="setIdpModule"
+        >
+          <option disabled value="">Choose IDP</option>
+          <option v-for="option in idp_list" :value="option.provider" :key="option.provider">
+            {{ option.module }}: {{ option.provider }}
+          </option>
+        </select>
+      </InputItem>
+      <InputItem>
+        <template #message>{{ errors.config_Role }}</template>
+        <template #label><label for="role">IAM Role ARN</label></template>
+        <input
+          placeholder="arn:aws:iam::<account-id>:role/<role-name>"
+          type="text"
+          id="role"
+          v-model="Role"
+          v-bind="Role_attrs"
+        />
+      </InputItem>
+      <InputItem v-if="argon2_hash_attrs.visible">
+        <template #message>{{ errors.config_argon2_hash }}</template>
+        <template #label><label for="argon2_hash">Argon2 Hash</label></template>
+        <input
+          placeholder="$argon2i$v=19$m=4096,t=3,p=$argon2i$v=19$m=4096,t=3,p=XX"
+          type="text"
+          id="argon2_hash"
+          v-model="argon2_hash"
+          v-bind="argon2_hash_attrs"
+        />
+      </InputItem>
+      <h4>Home Directory Type</h4>
+      <InputItem>
+        <template #message></template>
+        <template #label><label for="LOGICAL">LOGICAL</label></template>
+        <input
+          type="radio"
+          id="LOGICAL"
+          name="home_directory_type"
+          value="LOGICAL"
+          v-model="HomeDirectoryType"
+          v-bind="HomeDirectoryType_attrs"
+        />
+      </InputItem>
+      <InputItem>
+        <template #message></template>
+        <template #label><label for="PATH">PATH</label></template>
+        <input
+          type="radio"
+          id="PATH"
+          name="home_directory_type"
+          value="PATH"
+          v-model="HomeDirectoryType"
+          v-bind="HomeDirectoryType_attrs"
+        />
+      </InputItem>
+      <InputItem v-if="HomeDirectory_attrs.visible">
+        <template #message>{{ errors.config_HomeDirectory }}</template>
+        <template #label><label for="home_directory">Home Directory</label></template>
+        <input
+          placeholder="S3 or EFS path"
+          type="text"
+          name="role"
+          v-model="HomeDirectory"
+          v-bind="HomeDirectory_attrs"
+        />
+      </InputItem>
+      <input-item>
+        <template #message>{{ errors.ipv4_allow_list }}</template>
+        <template #label><label for="ipv4_allow_list">IPv4 Allow List</label></template>
+        <textarea
+          id="ipv4_allow_list"
+          placeholder="CIDR address per line"
+          v-model="ipv4_allow_list"
+          v-bind="ipv4_allow_list_attrs"
+        ></textarea>
+      </input-item>
 
-        <h4>Home Directory Details</h4>
-        <button type="button" @click="homePush('')" class="btn btn-secondary">Add Home Directory Detail</button>
-        <div v-for="(field, index) in homeFields" :key="field.key">
-          <input-item>
-            <template #label><label :for="'entry' + index">Entry</label></template>
-            <input
-              type="text"
-              :id="'entry' + index"
-              v-model.lazy="homeFields[index].value['Entry']"
-            />
-          </input-item>
-          <input-item>
-            <template #label><label :for="'target' + index">Target</label></template>
-            <input
-              type="text"
-              :id="'target' + index"
-              v-model.lazy="homeFields[index].value['Target']"
-            />
-          </input-item>
-          <input-item>
+      <h4>Home Directory Details</h4>
+      <button type="button" @click="homePush('')" class="btn btn-secondary">
+        Add Home Directory Detail
+      </button>
+      <div v-for="(field, index) in homeFields" :key="field.key">
+        <input-item>
+          <template #label><label :for="'entry' + index">Entry</label></template>
+          <input
+            type="text"
+            :id="'entry' + index"
+            v-model.lazy="homeFields[index].value['Entry']"
+          />
+        </input-item>
+        <input-item>
+          <template #label><label :for="'target' + index">Target</label></template>
+          <input
+            type="text"
+            :id="'target' + index"
+            v-model.lazy="homeFields[index].value['Target']"
+          />
+        </input-item>
+        <input-item>
           <template #label><label :for="'regions' + index">Allowed Regions</label></template>
           <textarea
             :id="'regions' + index"
             placeholder="One region code per line"
             v-model="homeFields[index].value['regions']"
           ></textarea>
-            <button type="button" @click="homeRemove(index)" class="btn btn-warning">Remove Detail</button>
+          <button type="button" @click="homeRemove(index)" class="btn btn-warning">
+            Remove Detail
+          </button>
         </input-item>
-        </div>
+      </div>
 
+      <h4>Posix Profiles</h4>
+      <button type="button" @click="posixPush('')" class="btn btn-secondary">
+        Add Posix Profile
+      </button>
+      <div v-for="(field, index) in posixFields" :key="field.key">
+        <input-item>
+          <template #label><label :for="'gid' + index">Gid</label></template>
+          <input type="text" :id="'gid' + index" v-model.lazy="posixFields[index].value['Gid']" />
+        </input-item>
+        <input-item>
+          <template #label><label :for="'uid' + index">Uid</label></template>
+          <input type="text" :id="'uid' + index" v-model.lazy="posixFields[index].value['Uid']" />
+          <button type="button" @click="posixRemove(index)" class="btn btn-warning">
+            Remove Profile
+          </button>
+        </input-item>
+      </div>
 
-        <h4>Posix Profiles</h4>
-        <button type="button" @click="posixPush('')" class="btn btn-secondary">Add Posix Profile</button>
-        <div v-for="(field, index) in posixFields" :key="field.key">
-           <input-item>
-            <template #label><label :for="'gid' + index">Gid</label></template>
-            <input
-              type="text"
-              :id="'gid' + index"
-              v-model.lazy="posixFields[index].value['Gid']"
-            />
-          </input-item>
-          <input-item>
-            <template #label><label :for="'uid' + index">Uid</label></template>
-            <input
-              type="text"
-              :id="'uid' + index"
-              v-model.lazy="posixFields[index].value['Uid']"
-            />
-            <button type="button" @click="posixRemove(index)"  class="btn btn-warning">Remove Profile</button>
-          </input-item>
+      <h4>Public Keys</h4>
+      <button type="button" @click="keyPush('')" class="btn btn-secondary">Add Key</button>
+      <div v-for="(field, index) in keyFields" :key="field.key">
+        <input-item>
+          <textarea name="public_keys{{index}}" v-model.lazy="keyFields[index].value"></textarea>
+          <button type="button" @click="keyRemove(index)" class="btn btn-warning">
+            Remove Key
+          </button>
+        </input-item>
+      </div>
 
-        </div>
-
-
-
-        <h4>Public Keys</h4>
-        <button type="button" @click="keyPush('')" class="btn btn-secondary">Add Key</button>
-        <div v-for="(field, index) in keyFields" :key="field.key">
-          <input-item>
-            <textarea name="public_keys{{index}}" v-model.lazy="keyFields[index].value"></textarea>
-            <button type="button" @click="keyRemove(index)"  class="btn btn-warning">Remove Key</button>
-          </input-item>
-        </div>
-
-        <div id="complete">
-          <input id="form_submit" type="submit" value="Save"  class="btn btn-primary"/>
-          <input id="cancel" type="reset" onclick="window.location.reload()" value="Clear"  class="btn btn-warning"/>
-        </div>
-      </form>
-    </div>
-    <div class="row" v-else>
-      <p>{{ idp_load_msg }}</p>
-    </div>
-
+      <div id="complete">
+        <input id="form_submit" type="submit" value="Save" class="btn btn-primary" />
+        <input
+          id="cancel"
+          type="reset"
+          onclick="window.location.reload()"
+          value="Clear"
+          class="btn btn-warning"
+        />
+      </div>
+    </form>
+  </div>
+  <div class="row" v-else>
+    <p>{{ idp_load_msg }}</p>
+  </div>
 </template>
 
 <style>
@@ -214,31 +249,31 @@
   label {
     vertical-align: top;
   }
-  input[type="text"] {
+  input[type='text'] {
     width: 25em;
     display: block;
   }
   thead th {
     position: sticky;
     top: 0;
-    background-color: var(--bs-table-bg)
+    background-color: var(--bs-table-bg);
   }
   .btn {
-    margin-right: .75rem;
+    margin-right: 0.75rem;
   }
   #complete {
     margin-top: 1rem;
     text-align: center;
   }
   h4 {
-    margin-top: .3rem;
+    margin-top: 0.3rem;
   }
   textarea {
     display: block;
   }
   button {
     display: block;
-    margin-top: .3rem;
+    margin-top: 0.3rem;
   }
 }
 </style>
@@ -264,7 +299,8 @@ const operation = ref('Create New User')
 
 const schema = yup
   .object({
-    user: yup.string().required().lowercase('Username must be lowercase').label('Username'),
+    user: yup.string().required().lowercase('Username must be lowercase')
+      .matches(/^\S+$/, "Username cannot contain spaces").label('Username'),
     identity_provider_key: yup.string().required().label('Identity Provider Key'),
     identity_provider_module: yup.string().required().label('Your IdP must be for a valid IdP module'),
     ipv4_allow_list: yup
@@ -289,7 +325,7 @@ const schema = yup
     }),
     config_PosixProfile_Gid: yup.string().optional(),
     config_PosixProfile_Uid: yup.string().optional(),
-    
+
 
   })
   .strict(true)
@@ -445,8 +481,12 @@ async function editUser(user_name, identity_provider) {
   HomeDirectoryType.value = user_record.config.HomeDirectoryType
   HomeDirectory.value = user_record.config.HomeDirectory
   keyReplace(user_record.config.PublicKeys)
-  homeReplace(user_record.config.HomeDirectoryDetails)
-  posixReplace(user_record.config.PosixProfile)
+  if (user_record.HomeDirectoryDetails) {
+    homeReplace(user_record.config.HomeDirectoryDetails)
+  }
+  if (user_record.config.PosixProfile.length > 0) {
+    posixReplace(user_record.config.PosixProfile)
+  }
 }
 
 const user_load_msg = ref("Loading Users...")
@@ -470,7 +510,7 @@ async function getUser(user, identity_provider_key) {
       console.log('getUser ' + user + ' failure')
     }
   }).catch(error => {
-    console.log("Failed to load User list", error)
+    console.log("Failed to load user: " + user + ", provider: " + identity_provider_key, error)
     user_load_msg.value = "Failed to load User list, check your connection to the datasource."
     return []
   })

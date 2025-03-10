@@ -2,31 +2,33 @@
   <div>
     <div class="idp_list" v-if="idp_list.length > 0">
       <h2>Identity Providers</h2>
-      <table class="table table-sm table-striped table-hover"  data-bs-spy="scroll">
+      <table class="table table-sm table-striped table-hover" data-bs-spy="scroll">
         <thead>
-        <tr>
-          <th scope="col">#</th>
-          <th scope="col">Provider</th>
-          <th scope="col">Module</th>
-          <th scope="col">Actions</th>
-        </tr>
+          <tr>
+            <th scope="col">#</th>
+            <th scope="col">Provider</th>
+            <th scope="col">Module</th>
+            <th scope="col">Actions</th>
+          </tr>
         </thead>
         <tbody>
-        <tr v-for="(idp,index) in idp_list" :key="idp['provider']">
-          <th scope="row">{{ index }}</th>
-          <td>{{ idp.provider }}</td>
-          <td>{{ idp.module }}</td>
-          <td>
-            <button v-on:click="editIdp(idp.provider)" class="btn btn-secondary">Edit or Copy</button>
-            <button v-on:click="deleteIdp(idp.provider)" class="btn btn-danger">Delete</button>
-          </td>
-        </tr>
+          <tr v-for="(idp, index) in idp_list" :key="idp['provider']">
+            <th scope="row">{{ index }}</th>
+            <td>{{ idp.provider }}</td>
+            <td>{{ idp.module }}</td>
+            <td>
+              <button v-on:click="editIdp(idp.provider)" class="btn btn-secondary">
+                Edit or Copy
+              </button>
+              <button v-on:click="deleteIdp(idp.provider)" class="btn btn-danger">Delete</button>
+            </td>
+          </tr>
         </tbody>
       </table>
     </div>
     <div v-else>{{ idp_load_msg }}</div>
-    <h2>{{operation}}</h2>
-<!--    <p>ToDo: display success messages for deletes and saves</p>-->
+    <h2>{{ operation }}</h2>
+    <!--    <p>ToDo: display success messages for deletes and saves</p>-->
     <div class="idp" v-if="!idp_load_msg.includes('Failed')">
       <form id="idp-create" class="form-inline" v-on:submit.prevent="createIdp()">
         <InputItem>
@@ -70,7 +72,13 @@
         <InputItem v-if="server_attrs.visible">
           <template #message>{{ errors.config_server }}</template>
           <template #label><label for="server">LDAP Server</label></template>
-          <input placeholder="fully qualified domain name" id="server" type="text" v-model="server" v-bind="server_attrs" />
+          <input
+            placeholder="fully qualified domain name"
+            id="server"
+            type="text"
+            v-model="server"
+            v-bind="server_attrs"
+          />
         </InputItem>
 
         <InputItem v-if="search_base_attrs.visible">
@@ -252,7 +260,13 @@
         <InputItem v-if="okta_domain_attrs.visible">
           <template #message>{{ errors.okta_domain }}</template>
           <template #label><label for="">Okta Domain</label></template>
-          <input placeholder="fully qualified domain name" id="" type="text" v-bind="okta_domain_attrs" v-model="okta_domain" />
+          <input
+            placeholder="fully qualified domain name"
+            id=""
+            type="text"
+            v-bind="okta_domain_attrs"
+            v-model="okta_domain"
+          />
         </InputItem>
         <InputItem v-if="okta_app_client_id_attrs.visible">
           <template #message>{{ errors.okta_app_client_id }}</template>
@@ -262,11 +276,23 @@
         <InputItem v-if="okta_redirect_url_attrs.visible">
           <template #message>{{ errors.okta_redirect_url }}</template>
           <template #label><label for="">Okta Redirect URL</label></template>
-          <input placeholder="fully qualified domain name" id="" type="text" v-bind="okta_redirect_url_attrs" v-model="okta_redirect_url" />
+          <input
+            placeholder="fully qualified domain name"
+            id=""
+            type="text"
+            v-bind="okta_redirect_url_attrs"
+            v-model="okta_redirect_url"
+          />
         </InputItem>
         <div id="submit">
-          <input id="form_submit" type="submit" value="Save" class="btn btn-primary"/>
-          <input id="cancel" type="reset" onclick="window.location.reload()" value="Clear" class="btn btn-warning"/>
+          <input id="form_submit" type="submit" value="Save" class="btn btn-primary" />
+          <input
+            id="cancel"
+            type="reset"
+            onclick="window.location.reload()"
+            value="Clear"
+            class="btn btn-warning"
+          />
         </div>
       </form>
     </div>
@@ -286,7 +312,7 @@
     min-height: 100vh;
     display: flex;
   }
-  input[type="text"] {
+  input[type='text'] {
     width: 25em;
   }
   textarea {
@@ -297,7 +323,7 @@
     top: 0;
   }
   .btn {
-    margin-right: .75rem;
+    margin-right: 0.75rem;
   }
 }
 </style>
@@ -408,11 +434,14 @@ const [cognito_client_id, cognito_client_id_attrs] = defineField('config_cognito
     return { visible: module.value === 'cognito' }
   }
 })
-const [cognito_user_pool_region, cognito_user_pool_region_attrs] = defineField('config_cognito_user_pool_region', {
+const [cognito_user_pool_region, cognito_user_pool_region_attrs] = defineField(
+  'config_cognito_user_pool_region',
+  {
     props() {
       return { visible: module.value === 'cognito' }
     }
-  })
+  }
+)
 const [mfa, mfa_attrs] = defineField('config_mfa', {
   props() {
     return { visible: module.value === 'cognito' || module.value === 'okta' }
@@ -452,21 +481,27 @@ const [ssl_verify, ssl_verify_attrs] = defineField('config_ssl_verify', {
 })
 ssl.value = true
 ssl_verify.value = true
-const [ldap_ssl_ca_secret_arn, ldap_ssl_ca_secret_arn_attrs] = defineField('config_ldap_ssl_ca_secret_arn', {
+const [ldap_ssl_ca_secret_arn, ldap_ssl_ca_secret_arn_attrs] = defineField(
+  'config_ldap_ssl_ca_secret_arn',
+  {
     props() {
       return { visible: module.value === 'ldap' && ssl_verify.value === true }
     }
-  })
-const [ldap_service_account_secret_arn, ldap_service_account_secret_arn_attrs] = defineField('config_ldap_service_account_secret_arn', {
+  }
+)
+const [ldap_service_account_secret_arn, ldap_service_account_secret_arn_attrs] = defineField(
+  'config_ldap_service_account_secret_arn',
+  {
     props() {
       return { visible: module.value === 'ldap' && public_key_support.value === true }
     }
-  })
+  }
+)
 const [ldap_allowed_groups, ldap_allowed_groups_attrs] = defineField('config_ldap_allowed_groups', {
-    props() {
-      return { visible: module.value === 'ldap' }
-    }
-  })
+  props() {
+    return { visible: module.value === 'ldap' }
+  }
+})
 const [attributes_gid, attributes_gid_attrs] = defineField('config_attributes_gid', {
   props() {
     return { visible: module.value === 'ldap' || module.value === 'okta' }
@@ -487,11 +522,14 @@ const [attributes_policy, attributes_policy_attrs] = defineField('config_attribu
     return { visible: module.value === 'ldap' || module.value === 'okta' }
   }
 })
-const [ignore_missing_attributes, ignore_missing_attributes_attrs] = defineField('config_ignore_missing_attributes', {
+const [ignore_missing_attributes, ignore_missing_attributes_attrs] = defineField(
+  'config_ignore_missing_attributes',
+  {
     props() {
       return { visible: module.value === 'ldap' || module.value === 'okta' }
     }
-  })
+  }
+)
 const [public_key_support, public_key_support_attrs] = defineField('public_key_support', {
   props() {
     return { visible: module.value === 'public_key' || module.value === 'ldap' }
@@ -582,21 +620,22 @@ async function editIdp(provider_name) {
   ssl_verify.value = idp.config.ssl_verify
   ldap_ssl_ca_secret_arn.value = idp.config.ldap_ssl_ca_secret_arn
   ldap_service_account_secret_arn.value = idp.config.ldap_service_account_secret_arn
-  ldap_allowed_groups.value = idp.config.ldap_allowed_groups.join('\n')
-  attributes_gid.value  = idp.config.attributes.gid
-  attributes_uid.value  = idp.config.attributes.uid
+  if (idp.config.ldap_allowed_groups && idp.config.ldap_allowed_groups.length > 0) {
+    ldap_allowed_groups.value = idp.config.ldap_allowed_groups.join('\n')
+  }
+  attributes_gid.value = idp.config.attributes.gid
+  attributes_uid.value = idp.config.attributes.uid
   attributes_role.value = idp.config.attributes.role
   attributes_policy.value = idp.config.attributes.policy
   ignore_missing_attributes.value = idp.config.ignore_missing_attributes
   public_key_support.value = idp.public_key_support
-  client_id.value  = idp.config.client_id
+  client_id.value = idp.config.client_id
   app_secret_arn.value = idp.config.app_secret_arn
   authority_url.value = idp.config.authority_url
   okta_domain.value = idp.okta_domain
   okta_app_client_id.value = idp.okta_app_client_id
-  okta_redirect_url.value  = idp.okta_redirect_url
+  okta_redirect_url.value = idp.okta_redirect_url
 }
-
 
 async function putIdp(idp) {
   const signal = AbortSignal.timeout(3000)
@@ -615,7 +654,7 @@ async function putIdp(idp) {
     body: JSON.stringify(idp)
   })
 }
-const idp_load_msg = ref("Loading IDPs...")
+const idp_load_msg = ref('Loading IDPs...')
 
 function getIdp(provider) {
   let failed = false
@@ -630,17 +669,19 @@ function getIdp(provider) {
     headers: {
       'Content-Type': 'application/json'
     }
-  }).then((response) => {
-    if (response.ok) {
-      return response.json()
-    } else {
-      console.log('getIdp ' + provider + ' failure')
-    }
-  }).catch(error => {
-    console.log('Failed to load or connect to IDP datasource', error)
-    idp_load_msg.value = "Failed to load or connect to IDP datasource"
-    failed = true
   })
+    .then((response) => {
+      if (response.ok) {
+        return response.json()
+      } else {
+        console.log('getIdp ' + provider + ' failure')
+      }
+    })
+    .catch((error) => {
+      console.log('Failed to load or connect to IDP datasource', error)
+      idp_load_msg.value = 'Failed to load or connect to IDP datasource'
+      failed = true
+    })
   if (failed) {
     return []
   }
@@ -659,16 +700,18 @@ function deleteIdp(provider) {
     headers: {
       'Content-Type': 'application/json'
     }
-  }).then((response) => {
-    if (response.ok) {
-      console.log('deleteIdp success')
-      return response.json()
-    } else {
-      console.log('deleteIdp failure')
-    }
-  }).catch(error => {
-    console.log('Failed to delete IDP', error)
   })
+    .then((response) => {
+      if (response.ok) {
+        console.log('deleteIdp success')
+        return response.json()
+      } else {
+        console.log('deleteIdp failure')
+      }
+    })
+    .catch((error) => {
+      console.log('Failed to delete IDP', error)
+    })
   console.log('delete result' + result)
   idp_list.value = idp_list.value.filter((idp) => idp.provider !== provider)
   setTimeout(() => load_idp_list(), 250) // verbosely reload on delay
