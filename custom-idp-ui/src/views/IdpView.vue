@@ -25,8 +25,9 @@
       </table>
     </div>
     <div v-else>{{ idp_load_msg }}</div>
+    <h2>{{operation}}</h2>
+<!--    <p>ToDo: display success messages for deletes and saves</p>-->
     <div class="idp" v-if="!idp_load_msg.includes('Failed')">
-      <h2>{{operation}}</h2>
       <form id="idp-create" class="form-inline" v-on:submit.prevent="createIdp()">
         <InputItem>
           <template #message>{{ errors.module }}</template>

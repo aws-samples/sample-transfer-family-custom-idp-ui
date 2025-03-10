@@ -6,7 +6,6 @@
   </div>
   <div class="row">
     <div class="user_list" v-if="user_list.length > 0">
-
       <VTable :data="user_list" :filters="filters" class="table table-sm table-striped table-hover">
         <template #head>
             <VTh sortKey="user">Username</VTh>
@@ -33,6 +32,7 @@
   </div>
     <div class="row user" v-if="idp_list.length > 0">
       <h2>{{ operation }}</h2>
+<!--      <p>ToDo: display success messages for deletes and saves</p>-->
       <form
         id="user-form"
         class="form-inline"
