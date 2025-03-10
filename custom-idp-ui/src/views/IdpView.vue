@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div class="idp_list">
+    <div class="idp_list" v-if="idp_list.length > 0">
       <h2>Identity Providers</h2>
       <table class="table table-sm table-striped table-hover"  data-bs-spy="scroll">
         <thead>
@@ -24,8 +24,9 @@
         </tbody>
       </table>
     </div>
-    <h2>{{operation}}</h2>
-    <div class="idp">
+    <div v-else>{{ idp_load_msg }}</div>
+    <div class="idp" v-if="!idp_load_msg.includes('Failed')">
+      <h2>{{operation}}</h2>
       <form id="idp-create" class="form-inline" v-on:submit.prevent="createIdp()">
         <InputItem>
           <template #message>{{ errors.module }}</template>
@@ -613,8 +614,10 @@ async function putIdp(idp) {
     body: JSON.stringify(idp)
   })
 }
+const idp_load_msg = ref("Loading IDPs...")
 
 function getIdp(provider) {
+  let failed = false
   //console.log('getIdp: ' + provider)
   const signal = AbortSignal.timeout(3000)
   const url = 'http://localhost:8080/api/idp/'
@@ -632,7 +635,14 @@ function getIdp(provider) {
     } else {
       console.log('getIdp ' + provider + ' failure')
     }
+  }).catch(error => {
+    console.log('Failed to load or connect to IDP datasource', error)
+    idp_load_msg.value = "Failed to load or connect to IDP datasource"
+    failed = true
   })
+  if (failed) {
+    return []
+  }
   return result
 }
 
@@ -655,6 +665,8 @@ function deleteIdp(provider) {
     } else {
       console.log('deleteIdp failure')
     }
+  }).catch(error => {
+    console.log('Failed to delete IDP', error)
   })
   console.log('delete result' + result)
   idp_list.value = idp_list.value.filter((idp) => idp.provider !== provider)

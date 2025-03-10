@@ -5,7 +5,7 @@
     <div class="col-2" style="text-align: right"><input v-model="filters.name.value" class="filter"/></div>
   </div>
   <div class="row">
-    <div class="user_list">
+    <div class="user_list" v-if="user_list.length > 0">
 
       <VTable :data="user_list" :filters="filters" class="table table-sm table-striped table-hover">
         <template #head>
@@ -29,14 +29,14 @@
         </template>
       </VTable>
     </div>
+    <div v-else>{{ user_load_msg }}</div>
   </div>
-    <div class="row user">
+    <div class="row user" v-if="idp_list.length > 0">
       <h2>{{ operation }}</h2>
       <form
         id="user-form"
         class="form-inline"
         v-on:submit.prevent="createUser()"
-        v-if="idp_list.length > 0"
       >
         <InputItem>
           <template #message>{{ errors.user }}</template>
@@ -185,9 +185,9 @@
           <input id="cancel" type="reset" onclick="window.location.reload()" value="Clear"  class="btn btn-warning"/>
         </div>
       </form>
-      <div v-else>
-        <p>There are no IDPs configured. Please create an IDP then add users.</p>
-      </div>
+    </div>
+    <div class="row" v-else>
+      <p>{{ idp_load_msg }}</p>
     </div>
 
 </template>
@@ -395,6 +395,9 @@ async function putUser(user) {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify(user)
+  }).catch(error => {
+    console.log("Failed to update user " + user, error)
+    return false
   })
 }
 
@@ -402,6 +405,7 @@ const idp_list = ref([])
 const load_idp_list = async () => {
   idp_list.value = await getIdps()
 }
+const idp_load_msg = ref("Please create an IDP before adding users.")
 load_idp_list()
 
 function getIdps() {
@@ -422,6 +426,10 @@ function getIdps() {
     } else {
       console.log('getIdps failure')
     }
+  }).catch(error => {
+    console.log("Failed to load IDP list", error)
+    idp_load_msg.value = "Failed to load IDP list, check your connection to the datasource."
+    return []
   })
   return result
 }
@@ -441,6 +449,7 @@ async function editUser(user_name, identity_provider) {
   posixReplace(user_record.config.PosixProfile)
 }
 
+const user_load_msg = ref("Loading Users...")
 async function getUser(user, identity_provider_key) {
   //console.log('getUser: ' + user)
   const signal = AbortSignal.timeout(3000)
@@ -460,7 +469,12 @@ async function getUser(user, identity_provider_key) {
     } else {
       console.log('getUser ' + user + ' failure')
     }
+  }).catch(error => {
+    console.log("Failed to load User list", error)
+    user_load_msg.value = "Failed to load User list, check your connection to the datasource."
+    return []
   })
+
 }
 
 function deleteUser(user, identity_provider_key) {
@@ -483,6 +497,9 @@ function deleteUser(user, identity_provider_key) {
     } else {
       console.log('deleteUser failure')
     }
+  }).catch(error => {
+    console.log("Failed to delete user " + user, error)
+    return false
   })
   console.log('delete result' + result)
   user_list.value = user_list.value.filter((item) => item.user !== user)
