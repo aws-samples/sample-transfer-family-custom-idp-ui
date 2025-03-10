@@ -476,6 +476,7 @@ async function editUser(user_name, identity_provider) {
   user.value = user_record.user
   identity_provider_key.value = user_record.identity_provider_key
   identity_provider_module.value = idp_list.value.find((idp) => idp.provider === user_record.identity_provider_key).module
+  argon2_hash.value = user_record.config.argon2_hash
   ipv4_allow_list.value = user_record.ipv4_allow_list.join('\n')
   Role.value = user_record.config.Role
   HomeDirectoryType.value = user_record.config.HomeDirectoryType
