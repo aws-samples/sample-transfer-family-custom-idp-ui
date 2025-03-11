@@ -18,7 +18,8 @@
     "vue": "^3.4.29",
     "vue-router": "^4.3.3",
     "vuejs-smart-table": "^1.0.0-beta.6",
-    "yup": "^1.4.0"
+    "yup": "^1.4.0",
+    "bootstrap": "^5.3.3"
   },
   "devDependencies": {
     "@playwright/test": "^1.44.1",

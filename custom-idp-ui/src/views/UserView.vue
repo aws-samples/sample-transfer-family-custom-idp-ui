@@ -30,7 +30,7 @@
                 Edit or Copy
               </button>
               <button
-                v-on:click="deleteUser(row.user, row.identity_provider_key)"
+                v-on:click="confirmDelete(row.user, row.identity_provider_key)"
                 class="btn btn-danger"
               >
                 Delete
@@ -41,6 +41,24 @@
       </VTable>
     </div>
     <div v-else>{{ user_load_msg }}</div>
+
+
+    <div class="modal fade" id="id-of-modal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h1 class="modal-title fs-5" id="exampleModalToggleLabel2">Confirm Delete</h1>
+            </div>
+            <div class="modal-body">
+              Are you sure you want to delete <strong>{{ userToDelete }}</strong> from the <strong>{{ userToDeleteIdp}}</strong> Identity Provider? Confirming will immediately remove access for {{ userToDelete }}.
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-warning" @click="closeModal">Cancel</button>
+              <button type="button" class="btn btn-danger" @click="deleteUser">Confirm Delete</button>
+            </div>
+          </div>
+      </div>
+    </div>
   </div>
   <div class="row user" v-if="idp_list.length > 0">
     <h2>{{ operation }}</h2>
@@ -283,7 +301,29 @@
 import InputItem from '../components/InputItem.vue'
 import { useForm, useFieldArray } from 'vee-validate'
 import * as yup from 'yup'
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
+import { Modal } from 'bootstrap'
+
+onMounted(async => {
+  modal.value = new Modal('#id-of-modal', {})
+})
+
+const modal = ref(null)
+const userToDelete = ref(null)
+const userToDeleteIdp = ref(null)
+
+function confirmDelete(user, identity_provider_key) {
+  console.log("user: " + user + " idp: " + identity_provider_key)
+  userToDelete.value = user
+  userToDeleteIdp.value = identity_provider_key
+  modal.value.show();
+}
+
+function closeModal() {
+  modal.value.hide();
+}
+
+
 
 const user_list = ref([])
 const load_user_list = async () => {
@@ -518,12 +558,12 @@ async function getUser(user, identity_provider_key) {
 
 }
 
-function deleteUser(user, identity_provider_key) {
-  console.log('deleteUser: ' + user + ' from IdP ' + identity_provider_key)
+function deleteUser() {
+  console.log('deleteUser: ' + userToDelete.value + ' from IdP ' + userToDeleteIdp.value)
   const signal = AbortSignal.timeout(3000)
   const url = 'http://localhost:8080/api/user/'
-  const querystring = '?provider=' + identity_provider_key
-  let result = fetch(url + user+querystring, {
+  const querystring = '?provider=' + userToDeleteIdp.value
+  let result = fetch(url + userToDelete.value+querystring, {
     signal,
     method: 'DELETE',
     mode: 'cors',
@@ -539,11 +579,14 @@ function deleteUser(user, identity_provider_key) {
       console.log('deleteUser failure')
     }
   }).catch(error => {
-    console.log("Failed to delete user " + user, error)
+    console.log("Failed to delete user " + userToDelete.value, error)
     return false
   })
   console.log('delete result' + result)
-  user_list.value = user_list.value.filter((item) => item.user !== user)
+  userToDelete.value = null;
+  userToDeleteIdp.value = null;
+  modal.value.hide();
+  user_list.value = user_list.value.filter((item) => item.user !== userToDelete.value)
   setTimeout(() => load_user_list(), 250) // verbosely reload on delay
 }
 </script>
