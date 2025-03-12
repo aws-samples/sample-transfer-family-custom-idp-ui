@@ -1,18 +1,22 @@
 <template>
-  <div>
+  <div class="row" id="idps">
+    <div class="col-8"><h2>Identity Providers</h2></div>
+    <div class="col-1" style="text-align: right"><label>Filter:</label></div>
+    <div class="col-2" style="text-align: right">
+      <input v-model="filters.name.value" class="filter" />
+    </div>
+  </div>
+  <div class="row">
     <div class="idp_list" v-if="idp_list.length > 0">
-      <h2>Identity Providers</h2>
-      <table class="table table-sm table-striped table-hover" data-bs-spy="scroll">
-        <thead>
-          <tr>
+      <VTable :data="idp_list" :filters="filters" class="table table-sm table-striped table-hover">
+          <template #head>
             <th scope="col">#</th>
-            <th scope="col">Provider</th>
-            <th scope="col">Module</th>
+            <VTh sortKey="provider">Provider</VTh>
+            <VTh sortKey="module">Module</VTh>
             <th scope="col">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(idp, index) in idp_list" :key="idp['provider']">
+          </template>
+        <template #body="{ rows }">
+          <tr v-for="(idp, index) in rows" :key="idp['provider']">
             <th scope="row">{{ index }}</th>
             <td>{{ idp.provider }}</td>
             <td>{{ idp.module }}</td>
@@ -20,13 +24,38 @@
               <button v-on:click="editIdp(idp.provider)" class="btn btn-secondary">
                 Edit or Copy
               </button>
-              <button v-on:click="deleteIdp(idp.provider)" class="btn btn-danger">Delete</button>
+              <button v-on:click="confirmDelete(idp.provider)" class="btn btn-danger">Delete</button>
             </td>
           </tr>
-        </tbody>
-      </table>
+        </template>
+      </VTable>
     </div>
     <div v-else>{{ idp_load_msg }}</div>
+    <div class="modal fade" id="id-of-modal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h1 class="modal-title fs-5" id="exampleModalToggleLabel2">Confirm Delete</h1>
+            </div>
+            <div class="modal-body" v-if="idpUserCount < 1">
+              Are you sure you want to delete the <strong>{{ idpToDelete }}</strong> Identity Provider?
+<!--              Confirming will immediately remove access for {{ userToDelete }}.-->
+            </div>
+            <div class="modal-body" v-else>
+              <p>There are {{ idpUserCount }} users using this Identity Provider. Please remove all users before deleting an Identity Provider</p>
+            </div>
+            <div class="modal-footer" v-if="idpUserCount < 1">
+              <button type="button" class="btn btn-warning" @click="closeModal">Cancel</button>
+              <button type="button" class="btn btn-danger" @click="deleteIdp">Confirm Delete</button>
+            </div>
+            <div class="modal-footer" v-else>
+              <button type="button" class="btn btn-warning" @click="closeModal">OK</button>
+            </div>
+          </div>
+      </div>
+    </div>
+  </div>
+  <div class="row">
     <h2>{{ operation }}</h2>
     <!--    <p>ToDo: display success messages for deletes and saves</p>-->
     <div class="idp" v-if="!idp_load_msg.includes('Failed')">
@@ -307,7 +336,9 @@
     height: 250px;
     overflow-y: scroll;
   }
-
+  #idps {
+    margin-top: 1rem;
+  }
   .idp {
     min-height: 100vh;
     display: flex;
@@ -331,13 +362,37 @@
 import InputItem from '../components/InputItem.vue'
 import { useForm } from 'vee-validate'
 import * as yup from 'yup'
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
+import { Modal } from 'bootstrap'
+
+onMounted(async => {
+  modal.value = new Modal('#id-of-modal', {})
+})
+
+const modal = ref(null)
+const idpToDelete = ref(null)
+const idpUserCount = ref(0)
+
+async function confirmDelete(identity_provider_key) {
+  console.log("confirm delete idp: " + identity_provider_key)
+  idpToDelete.value = identity_provider_key
+  idpUserCount.value = await getUserCount(identity_provider_key)
+  modal.value.show();
+}
+
+function closeModal() {
+  modal.value.hide();
+}
 
 const idp_list = ref([])
 const load_idp_list = async () => {
   idp_list.value = await getIdp('')
 }
 load_idp_list()
+
+const filters = ref({
+   name: { value: '', keys: ['provider', 'module'] }
+})
 
 const schema = yup.object({
   module: yup.string().required('Select a Module type'),
@@ -652,9 +707,36 @@ async function putIdp(idp) {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify(idp)
+  }).catch((error) => {
+    console.log('Failed to update IDP', error)
   })
 }
 const idp_load_msg = ref('Loading IDPs...')
+
+async function getUserCount(identity_provider_key) {
+  const signal = AbortSignal.timeout(3000)
+  const url = 'http://localhost:8080/api/user/'
+  const querystring = '?count=true&provider=' + identity_provider_key
+  return fetch(url + querystring, {
+    signal,
+    method: 'GET',
+    mode: 'cors',
+    cache: 'no-cache',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  }).then((response) => {
+    if (response.ok) {
+      return response.json()
+    } else {
+      console.log('getUserCount ' + identity_provider_key + ' failure')
+    }
+  }).catch(error => {
+    console.log("Failed to load user count for: " + provider, error)
+    //user_load_msg.value = "Failed to load User list, check your connection to the datasource."
+    return -1
+  })
+}
 
 function getIdp(provider) {
   let failed = false
@@ -688,11 +770,11 @@ function getIdp(provider) {
   return result
 }
 
-function deleteIdp(provider) {
-  console.log('deleteIdp: ' + provider)
+function deleteIdp() {
+  console.log('deleteIdp: ' + idpToDelete.value)
   const signal = AbortSignal.timeout(3000)
   const url = 'http://localhost:8080/api/idp/'
-  let result = fetch(url + provider, {
+  let result = fetch(url + idpToDelete.value, {
     signal,
     method: 'DELETE',
     mode: 'cors',
@@ -713,7 +795,9 @@ function deleteIdp(provider) {
       console.log('Failed to delete IDP', error)
     })
   console.log('delete result' + result)
-  idp_list.value = idp_list.value.filter((idp) => idp.provider !== provider)
+  idpToDelete.value = null;
+  modal.value.hide();
+  idp_list.value = idp_list.value.filter((idp) => idp.provider !== idpToDelete.value)
   setTimeout(() => load_idp_list(), 250) // verbosely reload on delay
 }
 </script>

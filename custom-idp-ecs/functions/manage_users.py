@@ -60,8 +60,21 @@ def get(event):
         response = table.get_item(Key={'user':user, 'identity_provider_key':provider})
         body = response['Item']
     else:
-        response = table.scan()
-        body = response['Items']
+        # if query string count=true scan by idp, then get the count
+        count = event['queryStringParameters'].get('count', 'false')
+        if count == 'true':
+            provider = event['queryStringParameters']['provider']
+            response = table.scan(
+                FilterExpression=f'identity_provider_key = :provider',
+                ExpressionAttributeValues={
+                    ':provider': provider
+                },
+                Select='COUNT'
+            )
+            body = response['Count']
+        else:
+            response = table.scan()
+            body = response['Items']
     return {
         "isBase64Encoded": False,
         "statusCode": 200,
