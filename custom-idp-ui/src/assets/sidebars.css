@@ -87,3 +87,8 @@ main {
 
 .fw-semibold { font-weight: 600; }
 .lh-tight { line-height: 1.25; }
+
+
+.router-link-exact-active {
+  background-color: var(--bs-nav-pills-link-active-bg);
+}

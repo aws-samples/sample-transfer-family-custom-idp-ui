@@ -1,15 +1,5 @@
 <script setup>
 import { RouterLink, RouterView } from 'vue-router'
-
-function makeActive(evt) {
-    // revisit - misfires on first click, then starts working
-    var i, normal;
-    normal = document.getElementsByClassName("nav-link")
-    for (i = 0; i < normal.length; i++) {
-      normal[i].classList.remove("active")
-    }
-    evt.target.classList.add("active") // this is missing the target on some clicks
-}
 </script>
 
 <template>
@@ -21,19 +11,19 @@ function makeActive(evt) {
 
     <hr>
     <ul class="nav nav-pills flex-column mb-auto">
-      <li class="nav-item" v-on:click="makeActive">
-          <RouterLink to="/" class="nav-link text-white active">
+      <li class="nav-item" >
+          <RouterLink  id="nav" to="/" class="nav-link text-white">
             <svg class="bi pe-none me-2" width="16" height="16"><use xlink:href="#home"></use></svg>
             Home</RouterLink>
       </li>
-      <li class="nav-item" v-on:click="makeActive">
-        <RouterLink to="/idp" class="nav-link text-white">
+      <li class="nav-item" >
+        <RouterLink id="nav_idp" to="/idp" class="nav-link text-white">
           <svg class="bi pe-none me-2" width="16" height="16"><use xlink:href="#table"></use></svg>
           Identity Providers
         </RouterLink>
       </li>
-      <li class="nav-item" v-on:click="makeActive">
-        <RouterLink to="/user" class="nav-link text-white">
+      <li class="nav-item" >
+        <RouterLink id="nav_user" to="/user" class="nav-link text-white">
           <svg class="bi pe-none me-2" width="16" height="16"><use xlink:href="#people-circle"></use></svg>
           Users
         </RouterLink>
