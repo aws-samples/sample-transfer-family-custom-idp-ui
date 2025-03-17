@@ -71,6 +71,12 @@ start your port forwarding tunnel with the following command.
 aws ssm start-session --target $(aws ec2 describe-instances --filters 'Name=tag:Name,Values=TransferToolKitAdminClient' \
   --output text --query 'Reservations[*].Instances[*].InstanceId') --document-name AWS-StartPortForwardingSessionToRemoteHost --parameters '{"portNumber":["80"],"localPortNumber":["8080"],"host":["toolkit.transferfamily.aws.com"]}'
 ```
+
+```
+aws ssm start-session --target $(aws ec2 describe-instances --filters 'Name=tag:Name,Values=TransferToolKitAdminClient' \
+  --output text --query 'Reservations[*].Instances[*].InstanceId') --document-name AWS-StartPortForwardingSessionToRemoteHost --parameters '{"portNumber":["443"],"localPortNumber":["5000"],"host":["qjqguanr5a.execute-api.us-east-1.amazonaws.com"]}'
+```
+
 Connect to the version of the web-app deployed on ECS like on port 80.
 
 http://localhost:8080/idp
@@ -106,3 +112,6 @@ aws cognito-idp initiate-auth \
 aws cognito-idp change-password --previous-password --proposed-password --access-token    
 ```
 
+To test cognito
+create windows instance
+in edge, turn off redirect -> edge://flags/#edge-automatic-https

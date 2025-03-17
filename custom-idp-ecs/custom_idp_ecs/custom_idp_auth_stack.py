@@ -45,7 +45,9 @@ class CustomIdpAuthStack(Stack):
                                      mfa_second_factor=cognito.MfaSecondFactor(
                                          otp=True,
                                          sms=False
-                                     ))
+                                     ),
+
+                                     )
 
         domain = user_pool.add_domain('TransferToolkitUiUserPoolDomain',
                                       cognito_domain=cognito.CognitoDomainOptions(
@@ -108,26 +110,85 @@ class CustomIdpAuthStack(Stack):
                                 tracing_enabled=True
                             ))
 
-        hello = api.root.add_resource("hello")
-        hello.add_method("GET",
-                         apigw.MockIntegration(
-                             integration_responses=[{
-                                 'statusCode': '200',
-                                 'responseTemplates': {
-                                     'application/json': '{"message": "Hello from private API"}'
-                                 }
-                             }],
-                             request_templates={
-                                 'application/json': '{"statusCode": 200}'
+        cognito_root =  api.root.add_resource("cognito")
+        cognito_proxy = apigw.ProxyResource(self, "CognitoResource", parent=cognito_root, any_method=True)
+        cognito_proxy.add_method("GET",
+                         apigw.HttpIntegration(domain.base_url() + "/{proxy}",
+                                               proxy=True,
+                                               http_method="GET",
+                                               options=apigw.IntegrationOptions(
+                                                   request_parameters={
+                                                       'integration.request.path.proxy': 'method.request.path.proxy'
+                                                   },
+                                                   integration_responses=[apigw.IntegrationResponse(
+                                                       status_code="200",
+                                                       response_parameters={
+                                                           'method.response.header.Content-Type': "'application/json'"
+                                                       }
+                                                   )],
+                                                   passthrough_behavior=apigw.PassthroughBehavior.WHEN_NO_MATCH
+                                               )
+                                               ),
+                         request_parameters={
+                             'method.request.path.proxy': True
+                         },
+                         method_responses=[apigw.MethodResponse(
+                             status_code="200",
+                             response_parameters={
+                                 'method.response.header.Content-Type': True
                              }
-                         ),
-                         method_responses=[{
-                             'statusCode': '200',
-                             'responseModels': {
-                                 'application/json': apigw.Model.EMPTY_MODEL
-                             }
-                         }]
+                         )]
                          )
+
+
+        petstore = api.root.add_resource("petstore")
+        proxy = apigw.ProxyResource(self, "PetsResource", parent=petstore, any_method=False)
+        proxy.add_method("GET",
+                         apigw.HttpIntegration("http://petstore-demo-endpoint.execute-api.com/petstore/{proxy}",
+                                               proxy=True,
+                                               http_method="GET",
+                                               options=apigw.IntegrationOptions(
+                                                   request_parameters={
+                                                       'integration.request.path.proxy': 'method.request.path.proxy'
+                                                   },
+                                                   integration_responses=[apigw.IntegrationResponse(
+                                                       status_code="200",
+                                                       response_parameters={
+                                                           'method.response.header.Content-Type': "'application/json'"
+                                                       }
+                                                   )],
+                                                   passthrough_behavior=apigw.PassthroughBehavior.WHEN_NO_MATCH
+                                               )
+                                               ),
+                         request_parameters={
+                             'method.request.path.proxy': True
+                         },
+                         method_responses=[apigw.MethodResponse(
+                             status_code="200",
+                             response_parameters={
+                                 'method.response.header.Content-Type': True
+                             }
+                         )]
+                         )
+        # hello.add_method("GET",
+        #                  apigw.MockIntegration(
+        #                      integration_responses=[{
+        #                          'statusCode': '200',
+        #                          'responseTemplates': {
+        #                              'application/json': '{"message": "Hello from private API"}'
+        #                          }
+        #                      }],
+        #                      request_templates={
+        #                          'application/json': '{"statusCode": 200}'
+        #                      }
+        #                  ),
+        #                  method_responses=[{
+        #                      'statusCode': '200',
+        #                      'responseModels': {
+        #                          'application/json': apigw.Model.EMPTY_MODEL
+        #                      }
+        #                  }]
+        #                  )
 
         # api.
 
@@ -147,3 +208,4 @@ class CustomIdpAuthStack(Stack):
 
         cdk.CfnOutput(self, 'UserPoolId', value=user_pool.user_pool_id)
         cdk.CfnOutput(self, 'UserPoolClientId', value=user_pool_client.user_pool_client_id)
+        cdk.CfnOutput(self, 'ProxyEndpoint',  value=api.url_for_path(path="/pets"))

@@ -7,19 +7,22 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "configure": "node npm_scripts/generate_aws_exports.cjs",
     "test:unit": "vitest",
     "test:e2e": "playwright test",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs --fix --ignore-path .gitignore",
     "format": "prettier --write src/"
   },
   "dependencies": {
+    "@docsearch/css": "^3.9.0",
+    "bootstrap": "^5.3.3",
+    "jquery": "^3.7.1",
     "pinia": "^2.1.7",
     "vee-validate": "^4.12.6",
     "vue": "^3.4.29",
     "vue-router": "^4.3.3",
     "vuejs-smart-table": "^1.0.0-beta.6",
-    "yup": "^1.4.0",
-    "bootstrap": "^5.3.3"
+    "yup": "^1.4.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.44.1",
