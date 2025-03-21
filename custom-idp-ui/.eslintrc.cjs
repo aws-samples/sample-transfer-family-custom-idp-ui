@@ -18,6 +18,11 @@ module.exports = {
       ]
     }
   ],
+  "globals": {
+    "$": true,
+    "require": true,
+    "process": true
+  },
   parserOptions: {
     ecmaVersion: 'latest'
   }

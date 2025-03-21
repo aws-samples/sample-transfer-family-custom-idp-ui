@@ -5,9 +5,9 @@ import { createPinia } from 'pinia'
 
 import App from './App.vue'
 import router from './router'
-import 'jquery/dist/jquery.js'
-import 'bootstrap/dist/js/bootstrap.bundle.min.js';
-import 'bootstrap/dist/css/bootstrap.min.css';
+// import 'jquery/dist/jquery.js'
+// import 'bootstrap/dist/js/bootstrap.bundle.min.js';
+// import 'bootstrap/dist/css/bootstrap.min.css';
 import SmartTable from 'vuejs-smart-table'
 
 import '@docsearch/css';

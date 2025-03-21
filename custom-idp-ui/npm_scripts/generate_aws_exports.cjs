@@ -1,37 +1,65 @@
 #!/usr/bin/node
 
 const fs = require('node:fs');
-const { env } = require('eslint-plugin-vue/lib/configs/base.js')
+const { CloudFormationClient, DescribeStacksCommand } = require("@aws-sdk/client-cloudformation");
 
-const config = {
-  aws_project_region: "us-east-1",
-  aws_cognito_identity_pool_id: "process.env.AWS_COGNITO_IDENTITY_POOL_ID",
-  aws_cognito_region: "process.env.AWS_COGNITO_REGION",
-  aws_user_pools_id: "process.env.AWS_USER_POOLS_ID",
-  aws_user_pools_web_client_id: "process.env.AWS_USER_POOLS_WEB_CLIENT_ID",
-  // aws_project_region: env.AWS_PROJECT_REGION,
-  // aws_cognito_identity_pool_id: process.env.AWS_COGNITO_IDENTITY_POOL_ID,
-  // aws_cognito_region: process.env.AWS_COGNITO_REGION,
-  // aws_user_pools_id: process.env.AWS_USER_POOLS_ID,
-  // aws_user_pools_web_client_id: process.env.AWS_USER_POOLS_WEB_CLIENT_ID,
-  // oauth: {},
-  // aws_cognito_login_providers: process.env.AWS_COGNITO_LOGIN_PROVIDERS,
-  // aws_cognito_signup_attributes: process.env.AWS_COGNITO_SIGNUP_ATTRIBUTES,
-  // aws_mandatory_sign_in: process.env.AWS_MANDATORY_SIGN_IN,
-  // aws_cognito_password_protection_settings: process.env.AWS_COGNITO_PASSWORD_PROTECTION_SETTINGS,
-  // aws_cognito_verification_mechanisms: process.env.AWS_COGNITO_VERIFICATION_MECHANISMS
-}
+//const aws_account = process.env.CDK_DEFAULT_ACCOUNT;
+const aws_region = process.env.CDK_DEFAULT_REGION;
 
-
-
-let config_string = "/* eslint-disable */\n";
-config_string += "export const awsmobile = ";
-config_string += JSON.stringify(config, null, 2)
-
-fs.writeFile('./src/assets/aws-exports.js', config_string, err => {
-  if (err) {
-    console.error(err);
-  } else {
-    // file written successfully
-  }
+const client = new CloudFormationClient({
+  region: aws_region
 });
+const input = {
+  StackName: "CustomIdpAuthStack",
+  // NextToken: "1",
+};
+const command = new DescribeStacksCommand(input);
+
+let userPoolClientId = ''
+let userPoolId = ''
+let apiProxyEndpoint = ''
+client.send(command).then(
+  (data) => {
+    let stack = data.Stacks[0]
+    stack.Outputs.forEach((output) => {
+      if (output.OutputKey === "UserPoolClientId") {
+        userPoolClientId = output.OutputValue
+      }
+      if (output.OutputKey === "UserPoolId") {
+        userPoolId = output.OutputValue
+      }
+      if (output.OutputKey === "ProxyEndpoint") {
+        apiProxyEndpoint = output.OutputValue
+      }
+    })
+    const config = {
+      aws_project_region: aws_region,
+      //aws_cognito_identity_pool_id: "you don't currently have one",
+      aws_cognito_region: aws_region,
+      aws_user_pools_id: userPoolId,
+      aws_user_pools_web_client_id: userPoolClientId,
+      "oauth": {},
+    }
+
+    const config_string = JSON.stringify(config, null, 2)
+
+    fs.writeFile('./src/amplifyConfiguration.json', config_string, err => {
+      if (err) {
+        console.error(err);
+      } else {
+        console.error("Successfully updated aws-exports.js");
+      }
+    });
+
+  },
+  (error) => {
+    console.log("error: " + error);
+  }
+);
+
+
+
+
+
+
+

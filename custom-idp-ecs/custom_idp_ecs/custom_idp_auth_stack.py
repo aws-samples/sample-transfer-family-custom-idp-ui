@@ -57,7 +57,7 @@ class CustomIdpAuthStack(Stack):
         user_pool_client = cognito.UserPoolClient(self, 'TransferToolkitUiUserPoolClient',
                                                   user_pool=user_pool,
                                                   user_pool_client_name='TransferToolkitUiUserPoolClient',
-                                                  generate_secret=True,
+                                                  generate_secret=False,
                                                   prevent_user_existence_errors=True,
                                                   access_token_validity=cdk.Duration.hours(1),
                                                   id_token_validity=cdk.Duration.hours(1),
