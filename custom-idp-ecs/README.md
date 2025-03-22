@@ -83,30 +83,15 @@ export USER_POOL_ID=`aws cloudformation describe-stacks --stack-name CustomIdpAu
 
 export USER_POOL_CLIENT_ID=`aws cloudformation describe-stacks --stack-name CustomIdpAuthStack --query "Stacks[0].Outputs[?OutputKey=='UserPoolClientId'].OutputValue" --output text --no-paginate`
 
-export USER_POOL_CLIENT_SECRET=`aws cognito-idp describe-user-pool-client --user-pool-id $USER_POOL_ID --client-id $USER_POOL_CLIENT_ID --query UserPoolClient.ClientSecret --output text`
-
+# create an idp admin user
 aws cognito-idp admin-create-user \
     --user-pool-id $USER_POOL_ID \
     --username kschwa+idpadmin@amazon.com \
-    --user-attributes Name=email,Value=kschwa+idpadmin@amazon.com Name=given_name,Value=Idp Name=family_name,Value=Admin \
-    --message-action SUPPRESS
+    --user-attributes Name=email,Value=kschwa+idpadmin@amazon.com Name=given_name,Value=Idp Name=family_name,Value=Admin
 
+# create a user admin user
 aws cognito-idp admin-create-user \
     --user-pool-id $USER_POOL_ID \
     --username kschwa+useradmin@amazon.com \
-    --user-attributes Name=email,Value=kschwa+useradmin@amazon.com Name=given_name,Value=User Name=family_name,Value=Admin \
-    --message-action SUPPRESS
-    
-export SECRET_HASH=`echo -n "kschwa+useradmin@amazon.com$USER_POOL_CLIENT_ID" | openssl dgst -sha256 -hmac $USER_POOL_CLIENT_SECRET -binary | openssl enc -base64`    
-    
-aws cognito-idp initiate-auth \
-  --auth-flow USER_PASSWORD_AUTH \
-  --auth-parameters USERNAME=kschwa+useradmin@amazon.com,PASSWORD=8JC4ggg,SECRET_HASH=$SECRET_HASH \
-  --client-id $USER_POOL_CLIENT_ID
-    
-aws cognito-idp change-password --previous-password --proposed-password --access-token    
+    --user-attributes Name=email,Value=kschwa+useradmin@amazon.com Name=given_name,Value=User Name=family_name,Value=Admin        
 ```
-
-To test cognito
-create windows instance
-in edge, turn off redirect -> edge://flags/#edge-automatic-https

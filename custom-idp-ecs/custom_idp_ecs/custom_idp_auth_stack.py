@@ -17,10 +17,6 @@ class CustomIdpAuthStack(Stack):
                  **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        # example applications
-        # https://github.com/MauriceBrg/cognito-alb-fargate-demo/blob/master/infrastructure/demo_stack.py
-        # https://aws.amazon.com/blogs/architecture/enriching-amazon-cognito-features-with-an-amazon-api-gateway-proxy/
-
         user_pool = cognito.UserPool(self, 'TransferToolkitUiUserPool',
                                      user_pool_name='TransferToolkitUiUserPool',
                                      self_sign_up_enabled=False,
@@ -139,58 +135,6 @@ class CustomIdpAuthStack(Stack):
                              }
                          )]
                          )
-
-
-        petstore = api.root.add_resource("petstore")
-        proxy = apigw.ProxyResource(self, "PetsResource", parent=petstore, any_method=False)
-        proxy.add_method("GET",
-                         apigw.HttpIntegration("http://petstore-demo-endpoint.execute-api.com/petstore/{proxy}",
-                                               proxy=True,
-                                               http_method="GET",
-                                               options=apigw.IntegrationOptions(
-                                                   request_parameters={
-                                                       'integration.request.path.proxy': 'method.request.path.proxy'
-                                                   },
-                                                   integration_responses=[apigw.IntegrationResponse(
-                                                       status_code="200",
-                                                       response_parameters={
-                                                           'method.response.header.Content-Type': "'application/json'"
-                                                       }
-                                                   )],
-                                                   passthrough_behavior=apigw.PassthroughBehavior.WHEN_NO_MATCH
-                                               )
-                                               ),
-                         request_parameters={
-                             'method.request.path.proxy': True
-                         },
-                         method_responses=[apigw.MethodResponse(
-                             status_code="200",
-                             response_parameters={
-                                 'method.response.header.Content-Type': True
-                             }
-                         )]
-                         )
-        # hello.add_method("GET",
-        #                  apigw.MockIntegration(
-        #                      integration_responses=[{
-        #                          'statusCode': '200',
-        #                          'responseTemplates': {
-        #                              'application/json': '{"message": "Hello from private API"}'
-        #                          }
-        #                      }],
-        #                      request_templates={
-        #                          'application/json': '{"statusCode": 200}'
-        #                      }
-        #                  ),
-        #                  method_responses=[{
-        #                      'statusCode': '200',
-        #                      'responseModels': {
-        #                          'application/json': apigw.Model.EMPTY_MODEL
-        #                      }
-        #                  }]
-        #                  )
-
-        # api.
 
         # api.root.add_to_resource_policy(
         #     iam.PolicyStatement(
