@@ -301,6 +301,7 @@ import { useForm, useFieldArray } from 'vee-validate'
 import * as yup from 'yup'
 import { onMounted, ref } from 'vue'
 import { Modal } from 'bootstrap'
+import { fetchAuthSession } from '@aws-amplify/auth'
 
 onMounted(async => {
   modal.value = new Modal('#id-of-modal', {})
@@ -309,6 +310,12 @@ onMounted(async => {
 const modal = ref(null)
 const userToDelete = ref(null)
 const userToDeleteIdp = ref(null)
+
+const token = ref(null)
+const setToken = async () => {
+  const auth =  await fetchAuthSession();
+  token.value = auth.tokens.accessToken
+}
 
 function confirmDelete(user, identity_provider_key) {
   console.log("user: " + user + " idp: " + identity_provider_key)
@@ -329,9 +336,9 @@ const load_user_list = async () => {
 }
 load_user_list()
 
-const filters = ref({
-   name: { value: '', keys: ['user', 'identity_provider_key', 'identity_provider_module', 'config.Role'] }
-})
+const filters = ref(
+  {name: { value: '', keys: ['user', 'identity_provider_key', 'identity_provider_module', 'config.Role'] }}
+)
 
 const operation = ref('Create New User')
 
@@ -466,6 +473,7 @@ async function putUser(user) {
     mode: 'cors',
     cache: 'no-cache',
     headers: {
+      'Authorization': 'Bearer ' + token.value,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify(user)
@@ -477,6 +485,7 @@ async function putUser(user) {
 
 const idp_list = ref([])
 const load_idp_list = async () => {
+  await setToken()
   idp_list.value = await getIdps()
 }
 const idp_load_msg = ref("Please create an IDP before adding users.")
@@ -492,6 +501,7 @@ function getIdps() {
     mode: 'cors',
     cache: 'no-cache',
     headers: {
+      'Authorization': 'Bearer ' + token.value,
       'Content-Type': 'application/json'
     }
   }).then((response) => {
@@ -530,7 +540,7 @@ async function editUser(user_name, identity_provider) {
 
 const user_load_msg = ref("Loading Users...")
 async function getUser(user, identity_provider_key) {
-  //console.log('getUser: ' + user)
+  await setToken()
   const signal = AbortSignal.timeout(3000)
   const url = 'http://localhost:8080/api/user/'
   const querystring = '?provider=' + identity_provider_key
@@ -540,6 +550,7 @@ async function getUser(user, identity_provider_key) {
     mode: 'cors',
     cache: 'no-cache',
     headers: {
+      'Authorization': 'Bearer ' + token.value,
       'Content-Type': 'application/json'
     }
   }).then((response) => {
@@ -567,6 +578,7 @@ function deleteUser() {
     mode: 'cors',
     cache: 'no-cache',
     headers: {
+      'Authorization': 'Bearer ' + token.value,
       'Content-Type': 'application/json'
     }
   }).then((response) => {

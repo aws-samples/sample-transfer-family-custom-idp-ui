@@ -364,6 +364,7 @@ import { useForm } from 'vee-validate'
 import * as yup from 'yup'
 import { onMounted, ref } from 'vue'
 import { Modal } from 'bootstrap'
+import { fetchAuthSession } from '@aws-amplify/auth'
 
 onMounted(async => {
   modal.value = new Modal('#id-of-modal', {})
@@ -372,6 +373,12 @@ onMounted(async => {
 const modal = ref(null)
 const idpToDelete = ref(null)
 const idpUserCount = ref(0)
+
+const token = ref(null)
+const setToken = async () => {
+  const auth =  await fetchAuthSession();
+  token.value = auth.tokens.accessToken
+}
 
 async function confirmDelete(identity_provider_key) {
   console.log("confirm delete idp: " + identity_provider_key)
@@ -386,6 +393,7 @@ function closeModal() {
 
 const idp_list = ref([])
 const load_idp_list = async () => {
+  await setToken()
   idp_list.value = await getIdp('')
 }
 load_idp_list()
@@ -704,6 +712,7 @@ async function putIdp(idp) {
     mode: 'cors',
     cache: 'no-cache',
     headers: {
+      'Authorization': 'Bearer ' + token.value,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify(idp)
@@ -723,6 +732,7 @@ async function getUserCount(identity_provider_key) {
     mode: 'cors',
     cache: 'no-cache',
     headers: {
+      'Authorization': 'Bearer ' + token.value,
       'Content-Type': 'application/json'
     }
   }).then((response) => {
@@ -749,6 +759,7 @@ function getIdp(provider) {
     mode: 'cors',
     cache: 'no-cache',
     headers: {
+      'Authorization': 'Bearer ' + token.value,
       'Content-Type': 'application/json'
     }
   })
@@ -780,6 +791,7 @@ function deleteIdp() {
     mode: 'cors',
     cache: 'no-cache',
     headers: {
+      'Authorization': 'Bearer ' + token.value,
       'Content-Type': 'application/json'
     }
   })

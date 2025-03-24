@@ -7,14 +7,17 @@ from dataclasses import dataclass
 import boto3
 import simplejson as json
 import os
+import jwt_token_helper as jwt
 
 logger = Logger()
 metrics = Metrics()
 tracer = Tracer()
 
 table_name = os.environ['IDP_TABLE_NAME']
+required_claim = "IdpAdmins"
 
 ddb_client = boto3.resource("dynamodb")
+
 
 @tracer.capture_lambda_handler
 @metrics.log_metrics
@@ -25,26 +28,30 @@ def handler(event: ALBEvent, context: LambdaContext):
 
     http_method = event['httpMethod']
     if http_method == "OPTIONS":
-        return options()
-    elif http_method == "GET":
-        return get(event)
-    elif http_method == "PUT":
-        return put(event)
-    elif http_method == "DELETE":
-        return delete(event)
-    else:
-        return unsupported_method(http_method)
+        return options(event)
 
-def unsupported_method(method):
-    return {
-        "isBase64Encoded": False,
-        "statusCode": 400,
-        "statusDescription": "405 Method Not Allowed",
-        "headers": {
-            "Content-Type": "application/json",
-        },
-        "body": f"{method} is not supported"
-    }
+    keys = jwt.get_keys()
+    jwt_token = event['headers']['authorization'].split(' ')[1]
+
+    try:
+        claims = jwt.validate_token(jwt_token, keys)
+        logger.info(f"token is valid with claims: {claims}")
+
+        if (required_claim in claims):
+            if http_method == "GET":
+                return get(event)
+            elif http_method == "PUT":
+                return put(event)
+            elif http_method == "DELETE":
+                return delete(event)
+            else:
+                return jwt.unsupported_method(http_method)
+        else:
+            logger.error(f"token is valid, but missing required claim: {required_claim}")
+            return jwt.invalid_token(f"token is valid, but missing required claim: {required_claim}")
+    except Exception as e:
+        logger.error(f"error validating token: {e}")
+        return jwt.invalid_token(e)
 
 def get(event):
     provider = event['path'].replace("/api/idp/", "")
@@ -68,8 +75,9 @@ def get(event):
         "statusDescription": "200 OK",
         "headers": {
             "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*",  # this should be ELB URL
-            "Access-Control-Allow-Headers": "Content-Type",
+            "Access-Control-Allow-Origin": event['headers']['origin'],  # apply allow list for more control
+            "Access-Control-Allow-Headers": "Content-Type, Authorization",
+            "Access-Control-Allow-Credentials": "true",
             "Access-Control-Allow-Methods": "OPTIONS,GET"
         },
         "body": json.dumps(body)
@@ -95,8 +103,9 @@ def put(event):
         "statusDescription": "200 OK",
         "headers": {
             "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*",  # this should be ELB URL
-            "Access-Control-Allow-Headers": "Content-Type",
+            "Access-Control-Allow-Origin": event['headers']['origin'],  # apply allow list for more control
+            "Access-Control-Allow-Headers": "Content-Type, Authorization",
+            "Access-Control-Allow-Credentials": "true",
             "Access-Control-Allow-Methods": "OPTIONS,PUT"
         },
         "body": dumps
@@ -118,14 +127,15 @@ def delete(event):
         "statusDescription": "200 OK",
         "headers": {
             "Content-Type": "application/json",  # this should be ELB URL
-            "Access-Control-Allow-Origin": "*",  # this should be ELB URL
-            "Access-Control-Allow-Headers": "Content-Type",
+            "Access-Control-Allow-Origin": event['headers']['origin'],  # apply allow list for more control
+            "Access-Control-Allow-Headers": "Content-Type, Authorization",
+            "Access-Control-Allow-Credentials": "true",
             "Access-Control-Allow-Methods": "OPTIONS,DELETE"
         },
         "body": json.dumps(response)
     }
 
-def options():
+def options(event):
     """
     Support for CORS preflight request for localhost and ELB endpoints
     :return: formatted http response
@@ -137,9 +147,10 @@ def options():
         "statusDescription": "200 OK",
         "headers": {
             "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*",  # this should be ELB URL
-            "Access-Control-Allow-Headers": "Content-Type",
-            "Access-Control-Allow-Methods": "OPTIONS,PUT,DELETE,GET"
+            "Access-Control-Allow-Origin": event['headers']['origin'],  # apply allow list for more control
+            "Access-Control-Allow-Headers": "Content-Type, Authorization",
+            "Access-Control-Allow-Credentials": "true",
+            "Access-Control-Allow-Methods": "OPTIONS,PUT,DELETE,GET",
         }
     }
 

@@ -2,7 +2,7 @@
 # ECS and Lambda for hosting the Toolkit Admin UI 
 
 This project creates an ECS service for hosting the Vue 3 web application,
-Lambda functions for CRUDL operations to the 'transferidp_identity_providers' and 
+Lambda functions for CRUDL operations to the 'transferidp_identity_providers' and ECS hosted UI
 
 ## Requirements
 
@@ -10,6 +10,16 @@ You will need Docker Desktop (or a similar alternative), Python3 and the AWS CDK
 
 If you have containerd-snapshotter installed, it will not be compatible with ECR, and deployments will fail.
 To workaround this disable contianerd. 
+
+## setup Lambda layer
+```
+rm -rf lambda_layers
+mkdir -p lambda_layers/python_jwt_layer/python/lib/python3.11/site-packages/
+cd lambda_layers/python_jwt_layer
+docker run  --platform linux/x86_64 -v "$PWD":/var/task "python:3.11-slim-bullseye" /bin/sh -c "cd /var/task; pip3 install --root-user-action=ignore --upgrade pip; pip3 install --root-user-action=ignore python-jose --target=python/lib/python3.11/site-packages/ --only-binary=:all:; exit"
+zip -r python_jwt.zip python > /dev/null
+cd ../..
+```
 
 ## Install the Toolkit IdP Admin Application 
 
@@ -68,9 +78,12 @@ If you are using the Session Manager port forwarding approach,
 start your port forwarding tunnel with the following command.
 
 ```
-aws ssm start-session --target $(aws ec2 describe-instances --filters 'Name=tag:Name,Values=TransferToolKitAdminClient' \
+aws ssm start-session --region $CDK_DEFAULT_REGION --target $(aws ec2 describe-instances --filters 'Name=tag:Name,Values=TransferToolKitAdminClient' \
   --output text --query 'Reservations[*].Instances[*].InstanceId') --document-name AWS-StartPortForwardingSessionToRemoteHost --parameters '{"portNumber":["80"],"localPortNumber":["8080"],"host":["toolkit.transferfamily.aws.com"]}'
 ```
+
+
+
 
 Connect to the version of the web-app deployed on ECS like on port 80.
 
@@ -81,17 +94,44 @@ http://localhost:8080/idp
 ```
 export USER_POOL_ID=`aws cloudformation describe-stacks --stack-name CustomIdpAuthStack --query "Stacks[0].Outputs[?OutputKey=='UserPoolId'].OutputValue" --output text --no-paginate`
 
-export USER_POOL_CLIENT_ID=`aws cloudformation describe-stacks --stack-name CustomIdpAuthStack --query "Stacks[0].Outputs[?OutputKey=='UserPoolClientId'].OutputValue" --output text --no-paginate`
+#export USER_POOL_CLIENT_ID=`aws cloudformation describe-stacks --stack-name CustomIdpAuthStack --query "Stacks[0].Outputs[?OutputKey=='UserPoolClientId'].OutputValue" --output text --no-paginate`
 
+# (export USER_POOL_CLIENT_ID=`aws cloudformation describe-stacks --stack-name CustomIdpAuthStack --query "Stacks[0].Outputs[?OutputKey=='UserPoolClientId'].OutputValue" --output text --no-paginate`)
+
+Check if you can reach your JWKS endpoint
+```aiignore
+aws ssm start-session --region $CDK_DEFAULT_REGION --target $(aws ec2 describe-instances --filters 'Name=tag:Name,Values=TransferToolKitAdminClient' \
+  --output text --query 'Reservations[*].Instances[*].InstanceId') 
+
+# how to get the stage URL? need another output fetch script
+curl https://1210a8by2f.execute-api.us-east-1.amazonaws.com/prod/cognito/$USER_POOL_ID/.well-known/jwks.json  
+```
+
+
+```
 # create an idp admin user
 aws cognito-idp admin-create-user \
     --user-pool-id $USER_POOL_ID \
     --username kschwa+idpadmin@amazon.com \
     --user-attributes Name=email,Value=kschwa+idpadmin@amazon.com Name=given_name,Value=Idp Name=family_name,Value=Admin
 
+aws cognito-idp admin-add-user-to-group \
+    --user-pool-id $USER_POOL_ID \
+    --username kschwa+idpadmin@amazon.com \
+    --group-name IdpAdmins
+aws cognito-idp admin-add-user-to-group \
+    --user-pool-id $USER_POOL_ID \
+    --username kschwa+idpadmin@amazon.com \
+    --group-name UserAdmins
+
 # create a user admin user
 aws cognito-idp admin-create-user \
     --user-pool-id $USER_POOL_ID \
     --username kschwa+useradmin@amazon.com \
-    --user-attributes Name=email,Value=kschwa+useradmin@amazon.com Name=given_name,Value=User Name=family_name,Value=Admin        
+    --user-attributes Name=email,Value=kschwa+useradmin@amazon.com Name=given_name,Value=User Name=family_name,Value=Admin      
+    
+aws cognito-idp admin-add-user-to-group \
+    --user-pool-id $USER_POOL_ID \
+    --username kschwa+useradmin@amazon.com \
+    --group-name UserAdmins
 ```

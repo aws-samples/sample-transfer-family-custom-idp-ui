@@ -1,4 +1,4 @@
-from constructs import Construct
+from constructs import Construct, IConstruct
 from aws_cdk import (
     Stack,
     aws_ec2 as ec2,
@@ -14,13 +14,28 @@ from aws_cdk import (
 )
 import aws_cdk as cdk
 import os
+import jsii
+
+@jsii.implements(cdk.IAspect)
+class HotfixCapacityProviderDependencies:
+    # Add a dependency from the capacity provider association to the cluster
+    # and from each service to the capacity provider association
+    # https://github.com/aws/aws-cdk/issues/19275
+    def visit(self, node: IConstruct) -> None:
+        if type(node) is ecs.Ec2Service:
+            children = node.cluster.node.find_all()
+            for child in children:
+                if type(child) is ecs.CfnClusterCapacityProviderAssociations:
+                    child.node.add_dependency(node.cluster)
+                    node.node.add_dependency(child)
 
 
-# setup logs retention
 
 class CustomIdpEcsStack(Stack):
 
     def __init__(self, scope: Construct, construct_id: str,
+                 user_pool_client_id: str,
+                 jwks_proxy_endpoint: str,
                  users_table: str = 'transferidp_users',
                  idp_table: str = 'transferidp_identity_providers',
                  alb_domain: str = 'toolkit.transferfamily.aws.com'
@@ -55,55 +70,72 @@ class CustomIdpEcsStack(Stack):
         service = ecs.FargateService(self, "Service",
                                      cluster=cluster,
                                      task_definition=task_definition,
-                                     capacity_provider_strategies=[ecs.CapacityProviderStrategy(
-                                         capacity_provider="FARGATE_SPOT",
-                                         weight=2
-                                     ), ecs.CapacityProviderStrategy(
-                                         capacity_provider="FARGATE",
-                                         weight=1
-                                     )
+                                     desired_count=1,
+                                     min_healthy_percent=50,
+                                     capacity_provider_strategies=[
+                                         ecs.CapacityProviderStrategy(
+                                             capacity_provider="FARGATE_SPOT",
+                                             weight=2
+                                         ), ecs.CapacityProviderStrategy(
+                                             capacity_provider="FARGATE",
+                                             weight=1
+                                         )
                                      ],
                                      circuit_breaker=ecs.DeploymentCircuitBreaker(
                                          enable=True,
                                          rollback=True
-                                     )
-                                     )
+                                     ))
+
+        cdk.Aspects.of(self).add(HotfixCapacityProviderDependencies())
 
         runtime = lambda_.Runtime.PYTHON_3_11
 
         # Todo: enable application signals -> https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-Application-Signals-Enable-Lambda.html
 
+        jwt_layer = lambda_.LayerVersion(self, id='python_jwt_layer',
+                                            code=lambda_.Code.from_asset("./lambda_layers/python_jwt_layer/python_jwt.zip"),
+                                            compatible_runtimes=[runtime],
+                                            description="python jwt validation layer",
+                                            layer_version_name="python_jwt_layer"
+                                        )
+
         idp_function = lambda_.Function(self, 'TransferToolkitUiLambda',
                                         runtime=runtime,
                                         handler='manage_idps.handler',
                                         code=lambda_.Code.from_asset(
-                                            os.path.join(os.path.dirname("./functions/manage_idps.py"))),
+                                            os.path.join(os.path.dirname("./functions/"))),
                                         vpc=vpc,
                                         environment={
                                             'POWERTOOLS_METRICS_NAMESPACE': 'TransferFamilyToolkit',
                                             'POWERTOOLS_SERVICE_NAME': "ToolkitIdpAdmin",
                                             "LOG_LEVEL": "DEBUG",
-                                            'IDP_TABLE_NAME': idp_table  # todo paramaterize
+                                            'IDP_TABLE_NAME': idp_table,
+                                            "COGNITO_USER_POOL_CLIENT_ID": user_pool_client_id,
+                                            "JWKS_PROXY_ENDPOINT": jwks_proxy_endpoint
                                         },
                                         tracing=lambda_.Tracing.ACTIVE,
                                         log_retention=cdk.aws_logs.RetentionDays.FIVE_DAYS,
-                                        timeout=cdk.Duration.seconds(3))
+                                        timeout=cdk.Duration.seconds(3),
+                                        layers=[jwt_layer])
 
         user_function = lambda_.Function(self, 'TransferToolkitUiUsersLambda',
                                          runtime=runtime,
                                          handler='manage_users.handler',
                                          code=lambda_.Code.from_asset(
-                                             os.path.join(os.path.dirname("./functions/manage_users.py"))),
+                                             os.path.join(os.path.dirname("./functions/"))),
                                          vpc=vpc,
                                          environment={
-                                             'POWERTOOLS_METRICS_NAMESPACE': 'TransferFamilyToolkit',
-                                             'POWERTOOLS_SERVICE_NAME': "ToolkitIdpAdmin",
-                                             "LOG_LEVEL": "DEBUG",
-                                             'USER_TABLE_NAME': users_table  # todo paramaterize
+                                            'POWERTOOLS_METRICS_NAMESPACE': 'TransferFamilyToolkit',
+                                            'POWERTOOLS_SERVICE_NAME': "ToolkitIdpAdmin",
+                                            "LOG_LEVEL": "DEBUG",
+                                            'USER_TABLE_NAME': users_table,
+                                            "COGNITO_USER_POOL_CLIENT_ID": user_pool_client_id,
+                                            "JWKS_PROXY_ENDPOINT": jwks_proxy_endpoint
                                          },
                                          tracing=lambda_.Tracing.ACTIVE,
                                          log_retention=cdk.aws_logs.RetentionDays.FIVE_DAYS,
-                                         timeout=cdk.Duration.seconds(3))
+                                         timeout=cdk.Duration.seconds(3),
+                                         layers=[jwt_layer])
 
         powertools_layer = lambda_.LayerVersion.from_layer_version_arn(self, id='lambdapowertools',
                                                                        layer_version_arn=f"arn:aws:lambda:{cdk.Stack.of(self).region}:017000801446:layer:AWSLambdaPowertoolsPythonV3-python311-x86_64:3")

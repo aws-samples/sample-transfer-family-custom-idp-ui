@@ -36,19 +36,26 @@ class CustomIdpAuthStack(Stack):
                                          require_symbols=True,
                                          temp_password_validity=cdk.Duration.days(1)
                                      ),
-                                     advanced_security_mode=cognito.AdvancedSecurityMode.ENFORCED,
+                                     feature_plan=cognito.FeaturePlan.ESSENTIALS,
                                      mfa=cognito.Mfa.REQUIRED,
                                      mfa_second_factor=cognito.MfaSecondFactor(
                                          otp=True,
                                          sms=False
-                                     ),
+                                     ))
 
-                                     )
+        user_pool.add_group('TransferToolkitUiIdpAdminsGroup',
+                            group_name='IdpAdmins',
+                            description='IdpAdmins group for the Transfer Toolkit UI',
+                            precedence=0)
+        user_pool.add_group('TransferToolkitUiUserAdminsGroup',
+                            group_name='UserAdmins',
+                            description='UserAdmins group for the Transfer Toolkit UI',
+                            precedence=0)
 
-        domain = user_pool.add_domain('TransferToolkitUiUserPoolDomain',
-                                      cognito_domain=cognito.CognitoDomainOptions(
-                                          domain_prefix=os.environ.get('COGNITO_DOMAIN_PREFIX', 'transfer-toolkit-ui')
-                                      ))
+        # domain = user_pool.add_domain('TransferToolkitUiUserPoolDomain',
+        #                               cognito_domain=cognito.CognitoDomainOptions(
+        #                                   domain_prefix=os.environ.get('COGNITO_DOMAIN_PREFIX', 'transfer-toolkit-ui')
+        #                               ))
 
         user_pool_client = cognito.UserPoolClient(self, 'TransferToolkitUiUserPoolClient',
                                                   user_pool=user_pool,
@@ -90,7 +97,7 @@ class CustomIdpAuthStack(Stack):
         endpoint_policy = iam.PolicyDocument(
             statements=[
                 iam.PolicyStatement(
-                    principals=[iam.AnyPrincipal()],
+                    principals=[iam.AnyPrincipal(), iam.AccountPrincipal(self.account)],
                     actions=["execute-api:Invoke"],
                     resources=["execute-api:/*"],
                     effect=iam.Effect.ALLOW
@@ -109,7 +116,7 @@ class CustomIdpAuthStack(Stack):
         cognito_root =  api.root.add_resource("cognito")
         cognito_proxy = apigw.ProxyResource(self, "CognitoResource", parent=cognito_root, any_method=True)
         cognito_proxy.add_method("GET",
-                         apigw.HttpIntegration(domain.base_url() + "/{proxy}",
+                         apigw.HttpIntegration(user_pool.user_pool_provider_url + "/{proxy}",
                                                proxy=True,
                                                http_method="GET",
                                                options=apigw.IntegrationOptions(
@@ -133,7 +140,8 @@ class CustomIdpAuthStack(Stack):
                              response_parameters={
                                  'method.response.header.Content-Type': True
                              }
-                         )]
+                         )],
+                         authorization_type=apigw.AuthorizationType.NONE,
                          )
 
         # api.root.add_to_resource_policy(
@@ -152,4 +160,7 @@ class CustomIdpAuthStack(Stack):
 
         cdk.CfnOutput(self, 'UserPoolId', value=user_pool.user_pool_id)
         cdk.CfnOutput(self, 'UserPoolClientId', value=user_pool_client.user_pool_client_id)
-        cdk.CfnOutput(self, 'ProxyEndpoint',  value=api.url_for_path(path="/pets"))
+        cdk.CfnOutput(self, 'JwksProxyEndpoint',  value=api.url_for_path(path=f"/cognito/.well-known/jwks.json"))
+
+        self.user_pool_client_id = user_pool_client.user_pool_client_id
+        self.jwks_proxy_endpoint = api.url_for_path(path=f"/cognito/.well-known/jwks.json")
