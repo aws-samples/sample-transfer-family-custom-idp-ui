@@ -18,6 +18,7 @@ import jsii
 
 @jsii.implements(cdk.IAspect)
 class HotfixCapacityProviderDependencies:
+    # NOT working, still seeing "The specified capacity provider is in use and cannot be removed"
     # Add a dependency from the capacity provider association to the cluster
     # and from each service to the capacity provider association
     # https://github.com/aws/aws-cdk/issues/19275

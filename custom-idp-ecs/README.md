@@ -117,7 +117,7 @@ Replace JWKS_ENDPOINT with your endpoint value, and curl the endpoint.
 curl <JWKS_ENDPOINT>
 ```
 
-You should see your user pool public keys printed to the screen. Now exit the SSM session by typing `exit` then start your port forwarding tunnel with the following command.
+You should see your user pool public keys printed to the screen. Now exit the SSM session by typing `exit` then start your port forwarding tunnel with the following command. If you have been doing your installation from cloudshell, this step must be run locally so that your broswer can communicate with this proxy. 
 
 ```
 aws ssm start-session --region $CDK_DEFAULT_REGION --target $(aws ec2 describe-instances --filters 'Name=tag:Name,Values=TransferToolKitAdminClient' \
@@ -163,4 +163,16 @@ aws cognito-idp admin-add-user-to-group \
     --user-pool-id $USER_POOL_ID \
     --username kschwa+useradmin@amazon.com \
     --group-name UserAdmins
+```
+
+
+##Cleanup
+in the ECS project dir (accept destroy prompt). If you see errors about capacity provider, you may need to run this again after it fails the first time. Second time will succeed and both stacks will be deleted. 
+```
+cdk destroy --all
+```
+
+Next in the VPC project dir
+```
+cdk destroy --all
 ```
