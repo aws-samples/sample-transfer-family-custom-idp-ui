@@ -47,7 +47,7 @@ client.send(command).then(
       if (err) {
         console.error(err);
       } else {
-        console.error("Successfully updated aws-exports.js");
+        console.error("Successfully created src/amplifyConfiguration.js");
       }
     });
 

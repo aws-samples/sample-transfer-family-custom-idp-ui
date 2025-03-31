@@ -36,14 +36,14 @@ class CustomIdpEcsStack(Stack):
     def __init__(self, scope: Construct, construct_id: str,
                  user_pool_client_id: str,
                  jwks_proxy_endpoint: str,
+                 vpc_name: str,
                  users_table: str = 'transferidp_users',
                  idp_table: str = 'transferidp_identity_providers',
-                 alb_domain: str = 'toolkit.transferfamily.aws.com'
-                 , **kwargs) -> None:
+                 alb_domain: str = 'toolkit.transferfamily.aws.com',
+                 **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        # if you are not using the provided vpc, update this to use your vpc name or id.
-        vpc = ec2.Vpc.from_lookup(self, 'ToolkitUiVpc', vpc_name='TransferToolkitUiVpcStack/ToolkitUiVpc')
+        vpc = ec2.Vpc.from_lookup(self, 'ToolkitUiVpc', vpc_name=vpc_name)
 
         cluster = ecs.Cluster(self, "TransferToolkitUiCluster", vpc=vpc, enable_fargate_capacity_providers=True)
         task_definition = ecs.FargateTaskDefinition(self, 'TransferToolkitUiTaskDefinition',

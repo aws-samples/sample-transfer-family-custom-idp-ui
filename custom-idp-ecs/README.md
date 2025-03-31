@@ -67,44 +67,73 @@ At this point you can now synthesize the CloudFormation template for this code.
 $ cdk synth
 ```
 
-Finally, deploy your VPC infrastructure
+Next, deploy the auth infrastructure
 
 ```
-$ cdk deploy
+$ cdk deploy CustomIdpAuthStack --require-approval never
 ```
+
+Now, create a new terminal session, leave the others open.
+cd into the UI project, load your AWS credentials if needed. 
+run 
+```
+source ./env.sh
+cd custom-idp-ui
+npm install
+npm run configure
+```
+You should see an output message "Successfully created src/amplifyConfiguration.js"
+Feel free to open this file and review, it allows the amplify hosted login UI to load for your user pool and user pool web app client. 
+
+Back to the terminal for the ECS project
+
+Now, deploy the web app and lambdas
+```
+$ cdk deploy CustomIdpEcsStack --require-approval never
+```
+
 
 Now you can test connectivity.
-If you are using the Session Manager port forwarding approach,
-start your port forwarding tunnel with the following command.
+If you are using the Session Manager port forwarding approach, use below, if not adjust for your environment
+
+
+Test VPC private connectivity to your JWKS endpoint. This step might take a few minutes.
+
+```
+export JWKS__PROXY_ENDPOINT=`aws cloudformation describe-stacks --region us-east-1 --stack-name CustomIdpAuthStack --query "Stacks[0].Outputs[?OutputKey=='JwksProxyEndpoint'].OutputValue" --output text --no-paginate`
+echo $JWKS__PROXY_ENDPOINT
+```
+Copy down the value for the next step. 
+Now start an SSM session to EC2. 
+
+```
+aws ssm start-session --region $CDK_DEFAULT_REGION --target $(aws ec2 describe-instances --filters 'Name=tag:Name,Values=TransferToolKitAdminClient' \
+  --output text --query 'Reservations[*].Instances[*].InstanceId') 
+```
+
+Replace JWKS_ENDPOINT with your endpoint value, and curl the endpoint. 
+
+```
+curl <JWKS_ENDPOINT>
+```
+
+You should see your user pool public keys printed to the screen. Now exit the SSM session by typing `exit` then start your port forwarding tunnel with the following command.
 
 ```
 aws ssm start-session --region $CDK_DEFAULT_REGION --target $(aws ec2 describe-instances --filters 'Name=tag:Name,Values=TransferToolKitAdminClient' \
   --output text --query 'Reservations[*].Instances[*].InstanceId') --document-name AWS-StartPortForwardingSessionToRemoteHost --parameters '{"portNumber":["80"],"localPortNumber":["8080"],"host":["toolkit.transferfamily.aws.com"]}'
 ```
 
-
-
-
 Connect to the version of the web-app deployed on ECS like on port 80.
 
-http://localhost:8080/idp
+http://localhost:8080/
 
 
 ## Auth setup
 ```
 export USER_POOL_ID=`aws cloudformation describe-stacks --stack-name CustomIdpAuthStack --query "Stacks[0].Outputs[?OutputKey=='UserPoolId'].OutputValue" --output text --no-paginate`
 
-#export USER_POOL_CLIENT_ID=`aws cloudformation describe-stacks --stack-name CustomIdpAuthStack --query "Stacks[0].Outputs[?OutputKey=='UserPoolClientId'].OutputValue" --output text --no-paginate`
 
-# (export USER_POOL_CLIENT_ID=`aws cloudformation describe-stacks --stack-name CustomIdpAuthStack --query "Stacks[0].Outputs[?OutputKey=='UserPoolClientId'].OutputValue" --output text --no-paginate`)
-
-Check if you can reach your JWKS endpoint
-```aiignore
-aws ssm start-session --region $CDK_DEFAULT_REGION --target $(aws ec2 describe-instances --filters 'Name=tag:Name,Values=TransferToolKitAdminClient' \
-  --output text --query 'Reservations[*].Instances[*].InstanceId') 
-
-# how to get the stage URL? need another output fetch script
-curl https://1210a8by2f.execute-api.us-east-1.amazonaws.com/prod/cognito/$USER_POOL_ID/.well-known/jwks.json  
 ```
 
 

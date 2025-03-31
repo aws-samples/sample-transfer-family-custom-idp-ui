@@ -55,5 +55,31 @@
         ]
       }
     ]
+  },
+  "vpc-provider:account=154737485204:filter.tag:Name=TransferToolkitUiVpcStack/ToolkitUiVpc:region=us-east-1:returnAsymmetricSubnets=true": {
+    "vpcId": "vpc-0c26fe16a150d728d",
+    "vpcCidrBlock": "10.0.0.0/16",
+    "ownerAccountId": "154737485204",
+    "availabilityZones": [],
+    "subnetGroups": [
+      {
+        "name": "ToolkitUi",
+        "type": "Isolated",
+        "subnets": [
+          {
+            "subnetId": "subnet-0ab7b429726058b18",
+            "cidr": "10.0.0.0/24",
+            "availabilityZone": "us-east-1a",
+            "routeTableId": "rtb-0b1f931ba633217df"
+          },
+          {
+            "subnetId": "subnet-0a008f21ac1a31415",
+            "cidr": "10.0.1.0/24",
+            "availabilityZone": "us-east-1b",
+            "routeTableId": "rtb-05becd73ba30a779b"
+          }
+        ]
+      }
+    ]
   }
 }

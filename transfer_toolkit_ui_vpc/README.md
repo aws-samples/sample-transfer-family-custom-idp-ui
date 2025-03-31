@@ -46,7 +46,7 @@ $ cdk synth
 Finally, deploy your VPC infrastructure
 
 ----
-$ cdk deploy
+$ cdk deploy --require-approval never
 ----
 
 Now continue on to install the custom IdP ECS project

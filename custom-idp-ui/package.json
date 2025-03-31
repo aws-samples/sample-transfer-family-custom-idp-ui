@@ -6,7 +6,7 @@
   "scripts": {
     "configure": "node npm_scripts/generate_aws_exports.cjs",
     "dev": "npm run configure && vite",
-    "build": "npm run configure && vite build",
+    "build": "vite build",
     "preview": "vite preview",
     "test:unit": "vitest",
     "test:e2e": "playwright test",

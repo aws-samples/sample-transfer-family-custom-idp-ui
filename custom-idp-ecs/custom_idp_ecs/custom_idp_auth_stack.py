@@ -13,6 +13,7 @@ import os
 class CustomIdpAuthStack(Stack):
 
     def __init__(self, scope: Construct, construct_id: str,
+                 vpc_name: str,
                  alb_domain: str = 'toolkit.transferfamily.aws.com',
                  **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
@@ -83,7 +84,7 @@ class CustomIdpAuthStack(Stack):
                                                       cognito.UserPoolClientIdentityProvider.COGNITO],
                                                   )
 
-        vpc = ec2.Vpc.from_lookup(self, 'ToolkitUiVpc', vpc_name='TransferToolkitUiVpcStack/ToolkitUiVpc')
+        vpc = ec2.Vpc.from_lookup(self, 'ToolkitUiVpc', vpc_name=vpc_name)
 
         vpc_endpoint = vpc.add_interface_endpoint("ApiGatewayVpcEndpoint",
                                                   service=ec2.InterfaceVpcEndpointService(
@@ -107,6 +108,7 @@ class CustomIdpAuthStack(Stack):
         api = apigw.RestApi(self, "UserPoolEgressProxyAPI",
                             endpoint_types=[apigw.EndpointType.PRIVATE],
                             policy=endpoint_policy,
+                            cloud_watch_role=True,
                             deploy_options=apigw.StageOptions(
                                 logging_level=apigw.MethodLoggingLevel.INFO,
                                 data_trace_enabled=True,
