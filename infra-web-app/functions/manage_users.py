@@ -89,7 +89,7 @@ def get(event):
         "statusDescription": "200 OK",
         "headers": {
             "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": event['headers']['origin'],  # apply allow list for more control
+            "Access-Control-Allow-Origin": event['headers'].get('origin','http://localhost:8080/'),  # apply allow list for more control
             "Access-Control-Allow-Headers": "Content-Type, Authorization",
             "Access-Control-Allow-Credentials": "true",
             "Access-Control-Allow-Methods": "OPTIONS,GET"
@@ -117,7 +117,7 @@ def put(event):
         "statusDescription": "200 OK",
         "headers": {
             "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": event['headers']['origin'],  # apply allow list for more control
+            "Access-Control-Allow-Origin": event['headers'].get('origin','http://localhost:8080/'),  # apply allow list for more control
             "Access-Control-Allow-Headers": "Content-Type, Authorization",
             "Access-Control-Allow-Credentials": "true",
             "Access-Control-Allow-Methods": "OPTIONS,PUT"
@@ -143,7 +143,7 @@ def delete(event):
         "statusDescription": "200 OK",
         "headers": {
             "Content-Type": "application/json",  # this should be ELB URL
-            "Access-Control-Allow-Origin": event['headers']['origin'],  # apply allow list for more control
+            "Access-Control-Allow-Origin": event['headers'].get('origin','http://localhost:8080/'),  # apply allow list for more control
             "Access-Control-Allow-Headers": "Content-Type, Authorization",
             "Access-Control-Allow-Credentials": "true",
             "Access-Control-Allow-Methods": "OPTIONS,DELETE"
@@ -163,7 +163,7 @@ def options(event):
         "statusDescription": "200 OK",
         "headers": {
             "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": event['headers']['origin'],  # apply allow list for more control
+            "Access-Control-Allow-Origin": event['headers'].get('origin','http://localhost:8080/'),  # apply allow list for more control
             "Access-Control-Allow-Headers": "Content-Type, Authorization",
             "Access-Control-Allow-Methods": "OPTIONS, PUT, DELETE, GET",
             "Access-Control-Allow-Credentials": "true"

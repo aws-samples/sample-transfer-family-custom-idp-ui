@@ -5,4 +5,4 @@ export USERS_TABLE=transferidp_users
 export IDP_TABLE=transferidp_identity_providers
 
 export ALB_DOMAIN_NAME=toolkit.transferfamily.aws.com
-export VPC_NAME=TransferToolkitUiVpcStack/ToolkitUiVpc
+export VPC_NAME=ToolkitWebAppVpc/ToolkitWebAppVpc

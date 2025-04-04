@@ -10,7 +10,7 @@ import aws_cdk as cdk
 import os
 
 
-class CustomIdpAuthStack(Stack):
+class IdpWebAppAuth(Stack):
 
     def __init__(self, scope: Construct, construct_id: str,
                  vpc_name: str,
@@ -18,8 +18,8 @@ class CustomIdpAuthStack(Stack):
                  **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        user_pool = cognito.UserPool(self, 'TransferToolkitUiUserPool',
-                                     user_pool_name='TransferToolkitUiUserPool',
+        user_pool = cognito.UserPool(self, 'ToolkitWebAppUserPool',
+                                     user_pool_name='ToolkitWebAppUserPool',
                                      self_sign_up_enabled=False,
                                      removal_policy=cdk.RemovalPolicy.DESTROY,
                                      sign_in_aliases=cognito.SignInAliases(email=True),
@@ -44,18 +44,18 @@ class CustomIdpAuthStack(Stack):
                                          sms=False
                                      ))
 
-        user_pool.add_group('TransferToolkitUiIdpAdminsGroup',
+        user_pool.add_group('ToolkitWebAppIdpAdminsGroup',
                             group_name='IdpAdmins',
                             description='IdpAdmins group for the Transfer Toolkit UI',
                             precedence=0)
-        user_pool.add_group('TransferToolkitUiUserAdminsGroup',
+        user_pool.add_group('ToolkitWebAppUserAdminsGroup',
                             group_name='UserAdmins',
                             description='UserAdmins group for the Transfer Toolkit UI',
                             precedence=0)
 
-        user_pool_client = cognito.UserPoolClient(self, 'TransferToolkitUiUserPoolClient',
+        user_pool_client = cognito.UserPoolClient(self, 'ToolkitWebAppUserPoolClient',
                                                   user_pool=user_pool,
-                                                  user_pool_client_name='TransferToolkitUiUserPoolClient',
+                                                  user_pool_client_name='ToolkitWebAppUserPoolClient',
                                                   generate_secret=False,
                                                   prevent_user_existence_errors=True,
                                                   access_token_validity=cdk.Duration.hours(1),
@@ -79,7 +79,7 @@ class CustomIdpAuthStack(Stack):
                                                       cognito.UserPoolClientIdentityProvider.COGNITO],
                                                   )
 
-        vpc = ec2.Vpc.from_lookup(self, 'ToolkitUiVpc', vpc_name=vpc_name)
+        vpc = ec2.Vpc.from_lookup(self, 'ToolkitWebAppVpc', vpc_name=vpc_name)
 
         vpc_endpoint = vpc.add_interface_endpoint("ApiGatewayVpcEndpoint",
                                                   service=ec2.InterfaceVpcEndpointService(

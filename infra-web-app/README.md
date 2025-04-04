@@ -98,7 +98,7 @@ Now you can test connectivity.
 If you are using the Session Manager port forwarding approach, use below, if not adjust for your environment
 
 
-Test VPC private connectivity to your JWKS endpoint. This step might take a few minutes.
+Optionally, test VPC private connectivity to your JWKS endpoint. This step might take a few minutes.
 
 ```
 export JWKS__PROXY_ENDPOINT=`aws cloudformation describe-stacks --region us-east-1 --stack-name CustomIdpAuthStack --query "Stacks[0].Outputs[?OutputKey=='JwksProxyEndpoint'].OutputValue" --output text --no-paginate`
@@ -121,7 +121,7 @@ curl <JWKS_ENDPOINT>
 You should see your user pool public keys printed to the screen. Now exit the SSM session by typing `exit` then start your port forwarding tunnel with the following command. If you have been doing your installation from cloudshell, this step must be run locally so that your broswer can communicate with this proxy. 
 
 ```
-aws ssm start-session --region $CDK_DEFAULT_REGION --target $(aws ec2 describe-instances --filters 'Name=tag:Name,Values=TransferToolKitAdminClient' \
+aws ssm start-session --region $CDK_DEFAULT_REGION --target $(aws ec2 describe-instances --filters 'Name=tag:Name,Values=ToolkitWebAppAdminClient' \
   --output text --query 'Reservations[*].Instances[*].InstanceId') --document-name AWS-StartPortForwardingSessionToRemoteHost --parameters '{"portNumber":["80"],"localPortNumber":["8080"],"host":["toolkit.transferfamily.aws.com"]}'
 ```
 
@@ -140,29 +140,37 @@ export USER_POOL_ID=`aws cloudformation describe-stacks --stack-name CustomIdpAu
 
 ```
 # create an idp admin user
+export USER_POOL_ID=`aws cloudformation describe-stacks --stack-name ToolkitWebAppAuth --query "Stacks[0].Outputs[?OutputKey=='UserPoolId'].OutputValue" --output text --no-paginate`
+
+export FULL_ADMIN_EMAIL=kschwa+idpadmin@amazon.com
+
 aws cognito-idp admin-create-user \
     --user-pool-id $USER_POOL_ID \
-    --username kschwa+idpadmin@amazon.com \
-    --user-attributes Name=email,Value=kschwa+idpadmin@amazon.com Name=given_name,Value=Idp Name=family_name,Value=Admin
+    --username $FULL_ADMIN_EMAIL \
+    --user-attributes Name=email,Value=$FULL_ADMIN_EMAIL Name=given_name,Value=Idp Name=family_name,Value=Admin
 
 aws cognito-idp admin-add-user-to-group \
     --user-pool-id $USER_POOL_ID \
-    --username kschwa+idpadmin@amazon.com \
+    --username $FULL_ADMIN_EMAIL \
     --group-name IdpAdmins
 aws cognito-idp admin-add-user-to-group \
     --user-pool-id $USER_POOL_ID \
-    --username kschwa+idpadmin@amazon.com \
+    --username $FULL_ADMIN_EMAIL \
     --group-name UserAdmins
 
+
 # create a user admin user
+
+export USER_ADMIN_EMAIL=kschwa+useradmin@amazon.com
+
 aws cognito-idp admin-create-user \
     --user-pool-id $USER_POOL_ID \
-    --username kschwa+useradmin@amazon.com \
-    --user-attributes Name=email,Value=kschwa+useradmin@amazon.com Name=given_name,Value=User Name=family_name,Value=Admin      
+    --username $USER_ADMIN_EMAIL \
+    --user-attributes Name=email,Value=$USER_ADMIN_EMAIL Name=given_name,Value=User Name=family_name,Value=Admin      
     
 aws cognito-idp admin-add-user-to-group \
     --user-pool-id $USER_POOL_ID \
-    --username kschwa+useradmin@amazon.com \
+    --username $USER_ADMIN_EMAIL \
     --group-name UserAdmins
 ```
 

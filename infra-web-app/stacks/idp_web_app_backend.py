@@ -32,7 +32,7 @@ class HotfixCapacityProviderDependencies:
 
 
 
-class CustomIdpEcsStack(Stack):
+class IdpWebAppBackend(Stack):
 
     def __init__(self, scope: Construct, construct_id: str,
                  user_pool_client_id: str,
@@ -46,8 +46,8 @@ class CustomIdpEcsStack(Stack):
 
         vpc = ec2.Vpc.from_lookup(self, 'ToolkitUiVpc', vpc_name=vpc_name)
 
-        cluster = ecs.Cluster(self, "TransferToolkitUiCluster", vpc=vpc, enable_fargate_capacity_providers=True)
-        task_definition = ecs.FargateTaskDefinition(self, 'TransferToolkitUiTaskDefinition',
+        cluster = ecs.Cluster(self, "ToolkitWebAppCluster", vpc=vpc, enable_fargate_capacity_providers=True)
+        task_definition = ecs.FargateTaskDefinition(self, 'ToolkitWebAppTaskDefinition',
                                                     runtime_platform=ecs.RuntimePlatform(
                                                         operating_system_family=ecs.OperatingSystemFamily.LINUX,
                                                         cpu_architecture=ecs.CpuArchitecture.ARM64
@@ -55,14 +55,14 @@ class CustomIdpEcsStack(Stack):
                                                     memory_limit_mib=1024, cpu=256
                                                     )
 
-        image = ecr_assets.DockerImageAsset(self, 'TransferToolkitUiWebAppImage',
-                                            directory=os.path.join(os.path.dirname('../.'), 'custom-idp-ui'))
+        image = ecr_assets.DockerImageAsset(self, 'ToolkitWebAppUIImage',
+                                            directory=os.path.join(os.path.dirname('../.'), 'ui-web-app'))
         image.repository.image_scan_on_push = True
 
-        container = task_definition.add_container('TransferToolkitUiWebApp',
+        container = task_definition.add_container('ToolkitWebAppUI',
                                                   image=ecs.ContainerImage.from_docker_image_asset(asset=image),
                                                   logging=ecs.LogDrivers.aws_logs(
-                                                      stream_prefix='TransferToolkitUiEcsLog',
+                                                      stream_prefix='ToolkitWebAppEcsLog',
                                                       mode=ecs.AwsLogDriverMode.NON_BLOCKING,
                                                       max_buffer_size=cdk.Size.mebibytes(25)
                                                   ))
@@ -100,7 +100,7 @@ class CustomIdpEcsStack(Stack):
                                             layer_version_name="python_jwt_layer"
                                         )
 
-        idp_function = lambda_.Function(self, 'TransferToolkitUiLambda',
+        idp_function = lambda_.Function(self, 'ToolkitWebAppLambda',
                                         runtime=runtime,
                                         handler='manage_idps.handler',
                                         code=lambda_.Code.from_asset(
@@ -119,7 +119,7 @@ class CustomIdpEcsStack(Stack):
                                         timeout=cdk.Duration.seconds(3),
                                         layers=[jwt_layer])
 
-        user_function = lambda_.Function(self, 'TransferToolkitUiUsersLambda',
+        user_function = lambda_.Function(self, 'ToolkitWebAppUsersLambda',
                                          runtime=runtime,
                                          handler='manage_users.handler',
                                          code=lambda_.Code.from_asset(
@@ -174,14 +174,14 @@ class CustomIdpEcsStack(Stack):
             resources=['*']  # scope to needed buckets
         ))
 
-        alb = elbv2.ApplicationLoadBalancer(self, 'TransferToolkitUiLoadBalancer',
+        alb = elbv2.ApplicationLoadBalancer(self, 'ToolkitWebAppLoadBalancer',
                                             vpc=vpc,
                                             internet_facing=False,
                                             #cross_zone_enabled=False,
                                             # read up on this
                                             )
 
-        zone = route53.PrivateHostedZone(self, 'TransferToolkitUiHostedZone',
+        zone = route53.PrivateHostedZone(self, 'ToolkitWebAppHostedZone',
                                          zone_name=alb_domain,
                                          vpc=vpc)
         route53.ARecord(self, "ToolkitUiDomain",
@@ -193,7 +193,7 @@ class CustomIdpEcsStack(Stack):
         # todo: to enable HTTPS, you will need a private certificate authority
         # https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_acmpca/CfnCertificateAuthority.html
 
-        # certificate = acm.PrivateCertificate(self, 'TransferToolkitUiCertificate',
+        # certificate = acm.PrivateCertificate(self, 'ToolkitWebAppCertificate',
         #                                      domain_name=toolkit_domain,
         #                                      certificate_authority=)
 
