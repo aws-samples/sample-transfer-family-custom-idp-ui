@@ -1,6 +1,7 @@
 import json
 import time
 import os
+import re
 import urllib.request
 from jose import jwk, jwt
 from jose.utils import base64url_decode
@@ -21,8 +22,11 @@ def get_keys():
     endpoint = os.environ['JWKS_PROXY_ENDPOINT']
     print(f"keys url: {endpoint}")
 
-    with urllib.request.urlopen(endpoint) as f:
-        response = f.read()
+    if re.search("^https:.*execute-api*.*amazonaws\\.com.*cognito/.well-known/jwks\\.json", endpoint):
+        with urllib.request.urlopen(endpoint) as f:
+            response = f.read()
+    else:
+        raise JwtTokenException({'message':'Invalid JWKS_PROXY_ENDPOINT', 'code':'00'})
 
     # have to format this to hit the cognito proxy in API gateway, then we are green light
     keys = json.loads(response.decode('utf-8'))['keys']

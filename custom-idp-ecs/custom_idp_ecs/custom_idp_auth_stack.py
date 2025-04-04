@@ -53,11 +53,6 @@ class CustomIdpAuthStack(Stack):
                             description='UserAdmins group for the Transfer Toolkit UI',
                             precedence=0)
 
-        # domain = user_pool.add_domain('TransferToolkitUiUserPoolDomain',
-        #                               cognito_domain=cognito.CognitoDomainOptions(
-        #                                   domain_prefix=os.environ.get('COGNITO_DOMAIN_PREFIX', 'transfer-toolkit-ui')
-        #                               ))
-
         user_pool_client = cognito.UserPoolClient(self, 'TransferToolkitUiUserPoolClient',
                                                   user_pool=user_pool,
                                                   user_pool_client_name='TransferToolkitUiUserPoolClient',
