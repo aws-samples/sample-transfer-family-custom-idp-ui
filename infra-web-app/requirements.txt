@@ -5,3 +5,4 @@ aws_lambda_powertools
 simplejson
 python-jose>=3.4.0
 jsii
+cdk-nag

@@ -1,3 +1,4 @@
+from cdk_nag import NagSuppressions
 from constructs import Construct
 from aws_cdk import (
     Stack,
@@ -161,3 +162,49 @@ class IdpWebAppAuth(Stack):
 
         self.user_pool_client_id = user_pool_client.user_pool_client_id
         self.jwks_proxy_endpoint = api.url_for_path(path=f"/cognito/.well-known/jwks.json")
+
+        NagSuppressions.add_resource_suppressions(user_pool,
+                                                  [
+                                                      {
+                                                          "id": "AwsSolutions-COG3",
+                                                          "reason": "Security ESSENTIALS for cost management during PoCs cognito.FeaturePlan.ESSENTIALS"
+                                                      },
+                                                  ],
+                                                  apply_to_children=True)
+
+        NagSuppressions.add_resource_suppressions(cognito_proxy,
+                                                  [
+                                                      {
+                                                          "id": "AwsSolutions-APIG4",
+                                                          "reason": "This proxy API points to a public for performing auth"
+                                                      },
+                                                      {
+                                                          "id": "AwsSolutions-COG4",
+                                                          "reason": "This proxy API points to a public for performing auth"
+                                                      }
+                                                  ],
+                                                  apply_to_children=True)
+
+        NagSuppressions.add_resource_suppressions(api,
+                                                  [
+                                                      {
+                                                          "id": "AwsSolutions-APIG2",
+                                                          "reason": "This proxy API, JWKS keys request has no input"
+                                                      },
+                                                      {
+                                                          "id": "AwsSolutions-APIG1",
+                                                          "reason": "Default stage, public asset"
+                                                      },
+                                                      {
+                                                          "id": "AwsSolutions-APIG3",
+                                                          "reason": "WAF omitted to keep PoC costs down, proxy to Cognito public endpoint"
+                                                      }
+                                                  ],
+                                                  apply_to_children=True)
+
+        NagSuppressions.add_stack_suppressions(self, [
+            {
+                "id": "AwsSolutions-IAM4",
+                "reason": "AWSLambdaBasicExecutionRole and CloudWatchRole is sufficient",
+            },
+        ])

@@ -2,6 +2,7 @@
 import os
 
 import aws_cdk as cdk
+from cdk_nag import AwsSolutionsChecks
 
 from stacks.idp_web_app_backend import IdpWebAppBackend
 from stacks.idp_web_app_auth import IdpWebAppAuth
@@ -22,5 +23,5 @@ IdpWebAppBackend(app, "ToolkitWebAppBackend", env=env,
                  users_table=os.environ["USERS_TABLE"],
                  idp_table=os.environ["IDP_TABLE"],
                  alb_domain=os.environ["ALB_DOMAIN_NAME"])
-
+cdk.Aspects.of(app).add(AwsSolutionsChecks(verbose=True))
 app.synth()

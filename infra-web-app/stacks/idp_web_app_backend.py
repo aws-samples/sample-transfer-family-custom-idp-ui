@@ -1,3 +1,4 @@
+from cdk_nag import NagSuppressions
 from constructs import Construct, IConstruct
 from aws_cdk import (
     Stack,
@@ -10,7 +11,8 @@ from aws_cdk import (
     aws_dynamodb as ddb,
     aws_iam as iam,
     aws_route53 as route53,
-    aws_route53_targets as route53_targets
+    aws_route53_targets as route53_targets,
+    aws_s3 as s3
 )
 import aws_cdk as cdk
 import os
@@ -46,7 +48,7 @@ class IdpWebAppBackend(Stack):
 
         vpc = ec2.Vpc.from_lookup(self, 'ToolkitUiVpc', vpc_name=vpc_name)
 
-        cluster = ecs.Cluster(self, "ToolkitWebAppCluster", vpc=vpc, enable_fargate_capacity_providers=True)
+        cluster = ecs.Cluster(self, "ToolkitWebAppCluster", vpc=vpc, enable_fargate_capacity_providers=True, container_insights=True)
         task_definition = ecs.FargateTaskDefinition(self, 'ToolkitWebAppTaskDefinition',
                                                     runtime_platform=ecs.RuntimePlatform(
                                                         operating_system_family=ecs.OperatingSystemFamily.LINUX,
@@ -89,7 +91,7 @@ class IdpWebAppBackend(Stack):
 
         cdk.Aspects.of(self).add(HotfixCapacityProviderDependencies())
 
-        runtime = lambda_.Runtime.PYTHON_3_11
+        runtime = lambda_.Runtime.PYTHON_3_13
 
         # Todo: enable application signals -> https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-Application-Signals-Enable-Lambda.html
 
@@ -174,12 +176,28 @@ class IdpWebAppBackend(Stack):
             resources=['*']  # scope to needed buckets
         ))
 
+        logs_bucket = s3.Bucket(self, 'LogsBucket',
+                                                 bucket_name="toolkit-web-app-logs",
+                                                 block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+                                                 encryption=s3.BucketEncryption.S3_MANAGED,
+                                                 enforce_ssl=True,
+                                                 removal_policy=cdk.RemovalPolicy.RETAIN
+                                                 )
+
+        alb_sg = ec2.SecurityGroup(self, "alb_sg", security_group_name="ToolkitWebAppApiSg",
+                                        description="ToolkitWebApp access to ALB, vpc=self.vpc",
+                                        vpc=vpc,
+                                        allow_all_outbound=True)
+        vpc_peer = ec2.Peer.ipv4(vpc.vpc_cidr_block)
+        alb_sg.add_ingress_rule(vpc_peer, ec2.Port.tcp(80))
+        alb_sg.add_ingress_rule(vpc_peer, ec2.Port.tcp(443))
         alb = elbv2.ApplicationLoadBalancer(self, 'ToolkitWebAppLoadBalancer',
                                             vpc=vpc,
                                             internet_facing=False,
-                                            #cross_zone_enabled=False,
-                                            # read up on this
+                                            security_group=alb_sg,
+                                            http2_enabled=True
                                             )
+        alb.log_access_logs(logs_bucket, "alb")
 
         zone = route53.PrivateHostedZone(self, 'ToolkitWebAppHostedZone',
                                          zone_name=alb_domain,
@@ -218,4 +236,77 @@ class IdpWebAppBackend(Stack):
         # todo --> add cognito stack with verified permissions to web app, admin and user management groups.
         # https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_verifiedpermissions/README.html
         # https://constructs.dev/packages/@cdklabs/cdk-verified-permissions/v/0.1.5?lang=typescript
+
+        NagSuppressions.add_resource_suppressions(task_definition,
+                                                  [
+                                                      {
+                                                          "id": "AwsSolutions-IAM5",
+                                                          "reason": "Allow all resources for ecr:GetAuthorizationToken",
+                                                          "appliesTo": ["Action::ecr:GetAuthorizationToken", "Resource::*"]
+                                                      },
+                                                  ],
+                                                  apply_to_children=True)
+
+        NagSuppressions.add_resource_suppressions(idp_function.role,
+                                                  [
+                                                      {
+                                                          "id": "AwsSolutions-IAM5",
+                                                          "reason": "Allow all VPC and basic managed policies",
+                                                          "appliesTo": [f"Policy::arn:{self.region}:iam::aws:policy/AWSLambdaBasicExecutionRole",
+                                                                        f"Policy::arn:{self.region}:iam::aws:policy/AWSLambdaVPCAccessExecutionRole",
+                                                                        "Resource::*"]
+                                                      },
+                                                      {
+                                                          "id": "AwsSolutions-IAM4",
+                                                          "reason": "Allow all VPC and basic managed policies",
+                                                          "appliesTo": [f"Policy::arn:{self.region}:iam::aws:policy/AWSLambdaBasicExecutionRole",
+                                                                        f"Policy::arn:{self.region}:iam::aws:policy/AWSLambdaVPCAccessExecutionRole",]
+                                                      },
+                                                  ],
+                                                  apply_to_children=True)
+
+        NagSuppressions.add_resource_suppressions(user_function.role,
+                                                  [
+                                                      {
+                                                          "id": "AwsSolutions-IAM5",
+                                                          "reason": "Allow all VPC and basic managed policies",
+                                                          "appliesTo": [f"Policy::arn:{self.region}:iam::aws:policy/AWSLambdaBasicExecutionRole",
+                                                                        f"Policy::arn:{self.region}:iam::aws:policy/AWSLambdaVPCAccessExecutionRole",
+                                                                        "Resource::*"]
+                                                      },
+                                                      {
+                                                          "id": "AwsSolutions-IAM4",
+                                                          "reason": "Allow all VPC and basic managed policies",
+                                                          "appliesTo": [f"Policy::arn:{self.region}:iam::aws:policy/AWSLambdaBasicExecutionRole",
+                                                                        f"Policy::arn:{self.region}:iam::aws:policy/AWSLambdaVPCAccessExecutionRole",]
+                                                      },
+                                                  ],
+                                                  apply_to_children=True)
+
+        NagSuppressions.add_resource_suppressions(logs_bucket,
+                                                  [
+                                                      {
+                                                          "id": "AwsSolutions-S1",
+                                                          "reason": "Logs bucket"
+                                                      },
+                                                  ])
+
+        NagSuppressions.add_stack_suppressions(self,[
+                                                      {
+                                                          "id": "AwsSolutions-IAM5",
+                                                          "reason": "AWSLambdaBasicExecutionRole and AWSLambdaVPCAccessExecutionRole are sufficient"
+                                                      },
+                                                      {
+                                                          "id": "AwsSolutions-IAM4",
+                                                          "reason": "AWSLambdaBasicExecutionRole and AWSLambdaVPCAccessExecutionRole are sufficient",
+                                                      },
+                                                  ])
+
+        NagSuppressions.add_resource_suppressions(alb_sg,
+                                                  [
+                                                      {
+                                                          "id": "AwsSolutions-EC23",
+                                                          "reason": "VPC CIDR range and allowed ports defined, not picked up by nag"
+                                                      },
+                                                  ])
 

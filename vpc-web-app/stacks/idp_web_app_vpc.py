@@ -2,12 +2,15 @@ from aws_cdk import (
     Tags,
     Stack,
     aws_ec2 as ec2,
-    aws_iam as iam
 )
+from cdk_nag import NagSuppressions
 from constructs import Construct
 
-# if using EFS, add to endpoints list
-interface_endpoints = ['ecr.dkr', 'ecr.api', 'xray', 'logs', 'ssm', 'ssmmessages', 'ec2messages', 'secretsmanager', 'elasticloadbalancing','monitoring', 'lambda']
+# if using EFS, add to interface_endpoints
+interface_endpoints = ['ecr.dkr', 'ecr.api', 'xray', 'logs', 'ssm', 'ssmmessages', 'ec2messages', 'secretsmanager',
+                       'elasticloadbalancing', 'monitoring', 'lambda']
+endpoint_actions = {'ec2messages':'ec2messages:*'}
+
 
 class IdpWebAppVpc(Stack):
 
@@ -33,18 +36,59 @@ class IdpWebAppVpc(Stack):
                 service=ec2.InterfaceVpcEndpointAwsService(endpoint, port=443),
                 private_dns_enabled=True,
                 security_groups=[endpoint_sg])
-            # Tags on endpoints aren't supported yet by Cfn, forward-looking attempt here
-            Tags.of(interface).add("Name", endpoint, include_resource_types=['AWS::EC2::VPCEndpoint'])
-
-
 
         bastion_sg = ec2.SecurityGroup(self, "bastion_sg", security_group_name="ToolkitWebAppAdminClientSg",
                                        description="allow access to bastion host", vpc=self.vpc,
                                        allow_all_outbound=True)
         bastion_sg.add_ingress_rule(vpc_peer, ec2.Port.tcp(80))
         bastion_sg.add_ingress_rule(vpc_peer, ec2.Port.tcp(443))
-        admin_client = ec2.BastionHostLinux(self, "ToolkitWebAppAdminClient", instance_name="ToolkitWebAppAdminClient", vpc=self.vpc,
+        admin_client = ec2.BastionHostLinux(self, "ToolkitWebAppAdminClient", instance_name="ToolkitWebAppAdminClient",
+                                            vpc=self.vpc,
                                             require_imdsv2=True,
                                             security_group=bastion_sg,
+                                            block_devices=[ec2.BlockDevice(
+                                                device_name="/dev/sdh",
+                                                volume=ec2.BlockDeviceVolume.ebs(10,
+                                                                                 encrypted=True
+                                                                                 )
+                                            )],
                                             subnet_selection=ec2.SubnetSelection(
                                                 subnet_type=subnet_type))
+
+        NagSuppressions.add_resource_suppressions(endpoint_sg,
+                                                  [
+                                                      {
+                                                          "id": "AwsSolutions-EC23",
+                                                          "reason": "EC23 can't read CIDR from intrinsic function ec2.Peer.ipv4()"
+                                                      },
+                                                  ])
+        NagSuppressions.add_resource_suppressions(bastion_sg,
+                                                  [
+                                                      {
+                                                          "id": "AwsSolutions-EC23",
+                                                          "reason": "EC23 can't read CIDR from intrinsic function ec2.Peer.ipv4()"
+                                                      },
+                                                  ])
+        NagSuppressions.add_resource_suppressions(admin_client.instance,
+                                                  [
+                                                      {
+                                                          "id": "AwsSolutions-EC28",
+                                                          "reason": "no ASG since admin_client is expected to be replaced with VPN or DX"
+                                                      },
+                                                  {
+                                                          "id": "AwsSolutions-EC29",
+                                                          "reason": "no ASK since admin_client is expected to be replaced with VPN or DX"
+                                                      },
+                                                  ])
+        NagSuppressions.add_resource_suppressions(admin_client.instance,
+                                                  [
+                                                      {
+                                                          "id": "AwsSolutions-IAM5",
+                                                          "reason": "Default policy for BastionHostLinux",
+                                                          "appliesTo": [
+                                                              "Action::ec2messages:*", "Action::ssmmessages:*",
+                                                              "Resource::*"
+                                                          ]
+                                                      },
+                                                  ],
+                                                  apply_to_children=True)
