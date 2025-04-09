@@ -141,7 +141,8 @@ class IdpWebAppBackend(Stack):
                                          layers=[jwt_layer])
 
         powertools_layer = lambda_.LayerVersion.from_layer_version_arn(self, id='lambdapowertools',
-                                                                       layer_version_arn=f"arn:aws:lambda:{cdk.Stack.of(self).region}:017000801446:layer:AWSLambdaPowertoolsPythonV3-python311-x86_64:3")
+                                                                       layer_version_arn=f"arn:aws:lambda:{cdk.Stack.of(self).region}:017000801446:layer:AWSLambdaPowertoolsPythonV3-python313-x86_64:12")
+
         idp_function.add_layers(powertools_layer)
         user_function.add_layers(powertools_layer)
 
