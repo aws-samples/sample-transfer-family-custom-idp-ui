@@ -333,6 +333,10 @@ function closeModal() {
 const user_list = ref([])
 const load_user_list = async () => {
   user_list.value = await getUser('', '')
+  console.log(user_list.value)
+  if (user_list.value.length == 0) {
+    user_load_msg.value = 'No users have been created'
+  }
 }
 load_user_list()
 

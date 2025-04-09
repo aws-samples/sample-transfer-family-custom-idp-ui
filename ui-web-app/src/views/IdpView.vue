@@ -395,6 +395,9 @@ const idp_list = ref([])
 const load_idp_list = async () => {
   await setToken()
   idp_list.value = await getIdp('')
+  if (idp_list.value.length == 0) {
+    idp_load_msg.value = 'No Identity Providers have been created'
+  }
 }
 load_idp_list()
 
