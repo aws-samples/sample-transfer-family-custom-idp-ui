@@ -347,7 +347,10 @@
     width: 25em;
   }
   textarea {
-    width: 40em;
+    width: 25em;
+  }
+  select {
+    width: 25em;
   }
   thead th {
     position: sticky;
