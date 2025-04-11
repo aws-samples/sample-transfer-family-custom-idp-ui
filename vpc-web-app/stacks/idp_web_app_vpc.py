@@ -77,7 +77,7 @@ class IdpWebAppVpc(Stack):
                                                       },
                                                   {
                                                           "id": "AwsSolutions-EC29",
-                                                          "reason": "no ASK since admin_client is expected to be replaced with VPN or DX"
+                                                          "reason": "no ASG since admin_client is expected to be replaced with VPN or DX"
                                                       },
                                                   ])
         NagSuppressions.add_resource_suppressions(admin_client.instance,

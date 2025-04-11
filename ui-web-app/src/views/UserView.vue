@@ -286,6 +286,7 @@
   }
   textarea {
     display: block;
+    width: 50em;
   }
   button {
     display: block;
