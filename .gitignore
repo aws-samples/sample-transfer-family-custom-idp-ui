@@ -2,3 +2,4 @@
 env.sh
 bandit-env/
 custom-idp/
+cdk.context.json
