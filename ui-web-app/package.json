@@ -16,7 +16,7 @@
   "dependencies": {
     "@aws-amplify/ui-vue": "^4.2.31",
     "@docsearch/css": "^3.9.0",
-    "aws-amplify": "^6.13.6",
+    "aws-amplify": "^6.16.2",
     "bootstrap": "^5.3.3",
     "jquery": "^3.7.1",
     "pinia": "^2.1.7",
@@ -27,7 +27,7 @@
     "yup": "^1.4.0"
   },
   "devDependencies": {
-    "@aws-sdk/client-cloudformation": "^3.772.0",
+    "@aws-sdk/client-cloudformation": "^3.995.0",
     "@playwright/test": "^1.44.1",
     "@rushstack/eslint-patch": "^1.8.0",
     "@vitejs/plugin-vue": "^5.0.5",
