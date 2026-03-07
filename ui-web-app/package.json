@@ -27,7 +27,7 @@
     "yup": "^1.4.0"
   },
   "devDependencies": {
-    "@aws-sdk/client-cloudformation": "^3.772.0",
+    "@aws-sdk/client-cloudformation": "^3.1004.0",
     "@playwright/test": "^1.56.1",
     "@rushstack/eslint-patch": "^1.8.0",
     "@vitejs/plugin-vue": "^5.0.5",
